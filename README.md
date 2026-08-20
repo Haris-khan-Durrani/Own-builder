@@ -1,15 +1,39 @@
 # 🚀 Own Builder - Enterprise Visual Template & Proposal IDE
 
-A modern, high-performance visual template builder and IDE for constructing invoices, business proposals, letters, certificates, and web components. **Own Builder** combines an intuitive click-to-edit visual canvas with full Ace code editors (HTML, CSS, JavaScript), real-time live preview, global domain branding, and advanced PDF print-rendering engines.
+<p align="center">
+  <img src="public/assets/readme_banner.png" alt="Own Builder Banner" width="100%" style="border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Node.js-16%2B-green?style=for-the-badge&logo=node.js" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Express.js-Framework-blue?style=for-the-badge&logo=express" alt="Express" />
+  <img src="https://img.shields.io/badge/MySQL-Database-orange?style=for-the-badge&logo=mysql" alt="MySQL" />
+  <img src="https://img.shields.io/badge/Ace%20Editor-Code%20IDE-purple?style=for-the-badge" alt="Ace Editor" />
+  <img src="https://img.shields.io/badge/PDF%20Print-Ready-emerald?style=for-the-badge&logo=adobeacrobatreader" alt="PDF Print Ready" />
+</p>
 
 ---
 
-## ✨ Key Features & Capabilities
+## ✨ Overview
 
-### 🎨 1. Advanced Visual Inspector (No-Code & Low-Code)
-* **Direct Click-to-Edit & Canvas Text Editing**: Click any element on the canvas to inspect and edit style properties. Double-click any text or heading to edit text right in place with a glowing focus ring.
-* **Inline Floating Action Toolbar**: A floating mini toolbar appears above selected elements for fast operations: `Move Up/Down`, `Select Parent`, `Add Block`, `Clone`, `Delete`, and `Full Code Inspector`.
-* **DOM Breadcrumbs Hierarchy**: Navigate complex nested tables and container cards using the live element hierarchy bar (`table > tbody > tr > td`).
+**Own Builder** is a modern, high-performance visual template builder and IDE for constructing invoices, business proposals, letters, contracts, certificates, and web components. 
+
+It seamlessly bridges the gap between **No-Code visual building** and **Full-Code inspection**, offering a live drag-and-drop / click-to-edit canvas alongside dual Ace Code Editors (HTML, CSS, JavaScript) with real-time syncing.
+
+---
+
+## 🎨 Visual Inspector & Design System Showcase
+
+<p align="center">
+  <img src="public/assets/visual_inspector_demo.png" alt="Visual Inspector Showcase" width="100%" style="border-radius: 8px; border: 1px solid #334155;" />
+</p>
+
+### 🛠️ Key Capabilities & Features
+
+#### 1. 🎨 Advanced Visual Inspector (No-Code & Low-Code)
+* **Direct Click-to-Edit & In-Canvas Editing**: Click any element on the canvas to inspect and edit style properties. Double-click any text or heading to edit text right in place with a glowing focus ring.
+* **Inline Floating Action Toolbar**: A floating mini bar appears right above selected canvas elements for fast operations: `Move Up/Down`, `Select Parent`, `Add Block`, `Clone`, `Delete`, and `Full Code Inspector`.
+* **DOM Breadcrumbs Hierarchy**: Easily select parent containers using the live element hierarchy bar (`table > tbody > tr > td`).
 * **Sub-Tab Style Controls**:
   * 🎨 **Style**: Text typography, font sizes, weights, alignments, text colors, brand swatches, padding, and margins.
   * 🌄 **Background**: Custom background images (`background-image: url(...)`) on ANY element (`<th>`, `<td>`, `<div>`, `<table>`, `<body>`, etc.) with full custom size (`100% 45px`, `cover`, `contain`), position (`center -10px`, `top left`), repeat, attachment, and gradient presets.
@@ -21,38 +45,37 @@ A modern, high-performance visual template builder and IDE for constructing invo
 
 ---
 
-### 🌄 2. Custom Background Engine (For Any Element)
+#### 🌄 2. Custom Background Engine (For Any Element)
 * **Background Image URL**: Apply background images to table headers, cells, table rows, cards, or body sections.
-* **Custom Background Dimensions**: Select from presets (`cover`, `contain`, `100% 100%`, `auto`) or choose **`⚙️ Custom Size`** to enter exact dimensions like `100% 45px`, `350px 60px`, `contain 90%`, etc.
-* **Custom Position & Repeat**: Fine-tune background position (`center -10px`, `top left`, etc.), tiling repeat modes, and fixed parallax attachment.
-* **Image Thumbnail Card & 1-Click Clear**: Instant visual thumbnail preview with a 1-click **Remove Background Image** button.
+* **⚙️ Custom Background Size**: Select standard options (`cover`, `contain`, `100% 100%`, `auto`) or choose **`⚙️ Custom Size`** to enter exact dimensions like `100% 45px`, `350px 60px`, `contain 90%`, etc.
+* **⚙️ Custom Position**: Choose presets or select **`⚙️ Custom Position`** (`center -10px`, `top left`, `right 10px top 5px`, etc.).
+* **Image Thumbnail Card**: Instant visual thumbnail preview with a 1-click **Remove Background Image** button.
 
 ---
 
-### 📄 3. PDF Print-Ready Optimization Engine
+#### 📄 3. PDF Print-Ready Optimization Engine
 * **Automatic `@media print` Enforcer**: Automatically injects `-webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;` into template stylesheets. Guarantees background images, background colors, and card gradients are never stripped when converting to PDF via Puppeteer, Dompdf, mPDF, or wkhtmltopdf.
 * **📄 1-Click PDF Preview**: Dedicated navbar button opening a print/PDF view preview in a new tab.
 * **PDF Page Break Controls**: Apply `page-break-inside: avoid` (prevent table row / card splitting in PDF) and `page-break-before: always` directly from the inspector layout panel.
-* **Visual A4 Page Break Guidelines**: Highlights A4 page height splits (`1123px`) with dotted visual markers so you know exactly where pages break.
+* **Visual A4 Page Break Guidelines**: Dotted visual markers calculated at exact A4 height splits (`1123px`).
 
 ---
 
-### 🎨 4. Global Domain Branding Integration
+#### 🎨 4. Global Domain Branding Integration
 * **Top Toolbar Integration**: Click **`🎨 Global Branding`** to access domain branding variables connected to `/api/global-branding-settings`.
 * **1-Click Theme Application**: Inject your domain's `:root { --brand-primary: ...; --brand-secondary: ...; --brand-font: ...; }` variables into the template CSS with 1 click.
 * **Brand Color Swatches**: Quick `🎨 Brand Primary` and `🎨 Brand Secondary` chips under text color, background color, and border color pickers.
 
 ---
 
-### 🔍 5. Component Code Inspector Modal (`#expanded-code-modal`)
+#### 🔍 5. Component Code Inspector Modal (`#expanded-code-modal`)
 * **Dual Ace Code Editors**: View and edit component HTML and CSS side-by-side in a 1340px IDE modal.
 * **Associated CSS Extraction**: Automatically extracts inline and stylesheet CSS rules for the selected element **and all descendant child elements**.
 * **Automatic CSS Cleanup**: Automatically purges orphan CSS rules when elements are deleted from the view.
-* **⚡ Live Template Syncing**: Edits made in the component code modal sync back to the main template editors and preview canvas in real time.
 
 ---
 
-### 💾 6. Persistent Workspace State (`localStorage`)
+#### 💾 6. Persistent Workspace State (`localStorage`)
 * Remembers your exact workspace layout across browser refreshes:
   * Active Editor Tab (`HTML`, `CSS`, `JavaScript`, `Split Stack`)
   * Code Panel Visibility (`Show Code` vs `Hide Code`)
@@ -64,19 +87,17 @@ A modern, high-performance visual template builder and IDE for constructing invo
 
 ---
 
-### ↩️ 7. History & Layer Management
-* **Global Undo & Redo**: Multi-level history snapshot tracking with full `Ctrl+Z` / `Ctrl+Y` keyboard shortcut support.
-* **Page Sections & Layers Tree**: Visual layer tree panel showing DOM nodes with search filtering, expand/collapse all, and smooth auto-scroll to canvas elements on click.
+## 🔄 Architecture & Data Flow
 
----
-
-## 🛠️ Technology Stack
-
-* **Backend**: Node.js, Express.js, EJS Templating
-* **Database**: MySQL (Auto-synchronizing schema)
-* **Code Editor Core**: Ace Editor (`one_dark`, `monokai`, `dracula`, `tomorrow_night`)
-* **Styling & UI**: Vanilla CSS3, Font Awesome 6.4, SweetAlert2, HTML Beautify
-* **Icons & Assets**: FontAwesome Free 6.4.0
+```mermaid
+graph TD
+    A[User Actions / Visual Inspector] -->|Live Styles & Edits| B[Live Canvas Preview iFrame]
+    A -->|Auto Sync| C[Ace Code Editors - HTML / CSS / JS]
+    C -->|Local Persistence| D[Browser LocalStorage Preferences]
+    C -->|Save Payload| E[Express Server /save-template]
+    E -->|DB Save| F[(MySQL Database)]
+    E -->|PDF Enforcer| G[PDF Print Renderer - Puppeteer/Dompdf]
+```
 
 ---
 
@@ -122,7 +143,7 @@ A modern, high-performance visual template builder and IDE for constructing invo
 
 ---
 
-## 🔌 Main API Endpoints
+## 🔌 API Endpoints Reference
 
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
