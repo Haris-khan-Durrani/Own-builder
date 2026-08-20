@@ -1,0 +1,3690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Template - <%= title %></title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.7/beautify.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.7/beautify-css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.7/beautify-html.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --bg-card: #111827;
+      --bg-editor: #1e293b;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --accent-blue: #38bdf8;
+      --accent-indigo: #6366f1;
+      --accent-green: #22c55e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --header-h: 56px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top Navbar */
+    #editor-nav {
+      height: var(--header-h);
+      background: rgba(17, 24, 39, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 14px;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+    }
+
+    .template-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .template-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #ffffff;
+      white-space: nowrap;
+      max-width: 250px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .template-badge {
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent-blue);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    .unsaved-indicator {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: #fbbf24;
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    .unsaved-indicator.active {
+      display: inline-flex;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn-secondary {
+      background: #1e293b;
+      color: var(--text-muted);
+      border-color: var(--border-color);
+    }
+    .btn-secondary:hover {
+      background: #334155;
+      color: #fff;
+    }
+
+    .btn-accent {
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+      border-color: rgba(99, 102, 241, 0.3);
+    }
+    .btn-accent:hover {
+      background: rgba(99, 102, 241, 0.3);
+      color: #ffffff;
+    }
+
+    .btn-save {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 0 12px rgba(37, 99, 235, 0.3);
+    }
+    .btn-save:hover {
+      background: linear-gradient(135deg, #0369a1, #1d4ed8);
+      box-shadow: 0 0 16px rgba(37, 99, 235, 0.5);
+    }
+
+    /* Main Grid Layout */
+    #editor-app {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      transition: grid-template-columns 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      height: calc(100vh - var(--header-h));
+      width: 100%;
+      background-color: var(--bg-dark);
+      position: relative;
+    }
+
+    /* Full Canvas Toggle Mode */
+    #editor-app.code-hidden {
+      grid-template-columns: 1fr !important;
+    }
+    #editor-app.code-hidden .code-panel {
+      display: none !important;
+    }
+
+    /* Left Side: Code Editor */
+    .code-panel {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border-color);
+      background: #0f172a;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .tab-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #1e293b;
+      border-bottom: 1px solid var(--border-color);
+      padding: 0 10px;
+      height: 40px;
+      flex-shrink: 0;
+    }
+
+    .tabs-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tab-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-radius: 4px 4px 0 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      color: var(--accent-blue);
+      background: #0f172a;
+      font-weight: 600;
+      border-bottom: 2px solid var(--accent-blue);
+    }
+
+    .editor-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .theme-select {
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .editors-wrapper {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .editor-pane {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    .editor-pane.active {
+      display: block;
+    }
+
+    .ace-instance {
+      width: 100%;
+      height: 100%;
+      font-family: 'Fira Code', monospace;
+      font-size: 13px;
+    }
+
+    /* Stacked mode layout */
+    .editors-wrapper.stacked-mode {
+      display: flex;
+      flex-direction: column;
+    }
+    .editors-wrapper.stacked-mode .editor-pane {
+      position: relative;
+      display: flex !important;
+      flex-direction: column;
+      flex: 1;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .editors-wrapper.stacked-mode .stacked-label {
+      background: #1e293b;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 10px;
+      color: var(--accent-blue);
+    }
+
+    /* Right Side: Sandbox Preview */
+    .preview-panel {
+      display: flex;
+      flex-direction: column;
+      background: #090d16;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .preview-toolbar {
+      height: 40px;
+      background: #1e293b;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      flex-shrink: 0;
+    }
+
+    .viewport-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #0f172a;
+      padding: 3px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .viewport-btn {
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .viewport-btn:hover {
+      color: #fff;
+    }
+
+    .viewport-btn.active {
+      background: #2563eb;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .preview-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .preview-toggle-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    /* Breadcrumbs Bar */
+    .preview-breadcrumbs-bar {
+      height: 28px;
+      background: #0f172a;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .preview-breadcrumbs-bar::-webkit-scrollbar { display: none; }
+    
+    .breadcrumb-item {
+      background: #1e293b;
+      color: #38bdf8;
+      font-family: monospace;
+      padding: 2px 6px;
+      border-radius: 3px;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      white-space: nowrap;
+      transition: all 0.1s;
+    }
+    .breadcrumb-item:hover {
+      background: #2563eb;
+      color: #ffffff;
+    }
+
+    .preview-frame-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #0f172a;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+      background-size: 16px 16px;
+      padding: 16px;
+      overflow: auto;
+      position: relative;
+    }
+
+    #preview-iframe {
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       VISUAL LAYERS TREE NAVIGATOR DRAWER
+    ══════════════════════════════════════════════════════════════ */
+    #layers-tree-panel {
+      position: absolute;
+      top: 40px;
+      left: -320px;
+      width: 300px;
+      bottom: 0;
+      background: #111827;
+      border-right: 1px solid var(--border-color);
+      z-index: 490;
+      display: flex;
+      flex-direction: column;
+      transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 8px 0 24px rgba(0, 0, 0, 0.6);
+      font-size: 12px;
+      overflow: hidden;
+    }
+    #layers-tree-panel.open {
+      left: 0;
+    }
+
+    .layer-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 8px;
+      margin-bottom: 2px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 11px;
+      color: #94a3b8;
+      transition: all 0.1s;
+    }
+    .layer-item:hover {
+      background: #1e293b;
+      color: #38bdf8;
+    }
+    .layer-item.active {
+      background: #2563eb;
+      color: #ffffff;
+      font-weight: 700;
+    }
+    .layer-tag {
+      font-weight: 700;
+      color: #38bdf8;
+    }
+    .layer-item.active .layer-tag { color: #ffffff; }
+
+    /* ══════════════════════════════════════════════════════════════
+       ADVANCED VISUAL ELEMENT INSPECTOR PANEL
+    ══════════════════════════════════════════════════════════════ */
+    #visual-inspector-panel {
+      position: absolute;
+      top: 40px;
+      right: -370px;
+      width: 360px;
+      bottom: 0;
+      background: #111827;
+      border-left: 1px solid var(--border-color);
+      z-index: 500;
+      display: flex;
+      flex-direction: column;
+      transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: -8px 0 24px rgba(0, 0, 0, 0.6);
+      font-size: 12px;
+      overflow: hidden;
+    }
+
+    #visual-inspector-panel.open {
+      right: 0;
+    }
+
+    .vi-header {
+      background: #1e293b;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .vi-tag-badge {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-weight: 700;
+      font-size: 11px;
+    }
+
+    .vi-class-badge {
+      color: var(--text-muted);
+      font-size: 11px;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .vi-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .vi-close-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+
+    /* Multi-Row Wrapping Sub-Tabs */
+    .vi-subtabs {
+      display: flex;
+      flex-wrap: wrap;
+      background: #0f172a;
+      border-bottom: 1px solid var(--border-color);
+      padding: 6px 8px;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .vi-subtab {
+      flex: 1 1 calc(33.33% - 4px);
+      min-width: 95px;
+      padding: 5px 6px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+      white-space: nowrap;
+      transition: all 0.12s ease;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .vi-subtab:hover { color: #fff; background: #334155; }
+    .vi-subtab.active {
+      background: #2563eb;
+      color: #fff;
+      border-color: #2563eb;
+      box-shadow: 0 0 8px rgba(37,99,235,0.4);
+    }
+
+    .vi-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+    .vi-body::-webkit-scrollbar { width: 4px; }
+    .vi-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+    .vi-pane { display: none; }
+    .vi-pane.active { display: block; }
+
+    .vi-section {
+      margin-bottom: 14px;
+    }
+
+    .vi-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent-blue);
+      margin-bottom: 8px;
+      padding-bottom: 3px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .vi-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+
+    .vi-label {
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 500;
+      width: 90px;
+      flex-shrink: 0;
+    }
+
+    .vi-control {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .vi-input {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      outline: none;
+    }
+    .vi-input:focus { border-color: var(--accent-blue); }
+
+    .vi-select {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      font-size: 11px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .vi-color-swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      flex-shrink: 0;
+      overflow: hidden;
+      padding: 0;
+    }
+    .vi-color-swatch input[type="color"] {
+      width: 40px; height: 40px; margin: -5px; cursor: pointer; border: none; background: none;
+    }
+
+    .vi-range {
+      flex: 1;
+      height: 4px;
+      accent-color: var(--accent-blue);
+    }
+
+    .vi-btn-group {
+      display: flex;
+      gap: 3px;
+      flex: 1;
+      flex-wrap: wrap;
+    }
+
+    .vi-btn {
+      flex: 1;
+      padding: 4px 6px;
+      font-size: 10px;
+      font-weight: 600;
+      background: #1e293b;
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.12s;
+      white-space: nowrap;
+    }
+    .vi-btn:hover { background: #334155; color: #fff; }
+    .vi-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+
+    .vi-quad {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 4px;
+      flex: 1;
+    }
+    .vi-quad-input {
+      width: 100%;
+      text-align: center;
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      font-size: 10px;
+      padding: 3px 2px;
+      border-radius: 4px;
+    }
+
+    .vi-preset-chip {
+      padding: 3px 8px;
+      font-size: 10px;
+      border-radius: 12px;
+      background: #1e293b;
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .vi-preset-chip:hover {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    /* Semi-transparent Glassmorphism Backdrop for Modals */
+    .swal2-container.swal2-backdrop-show {
+      background: rgba(15, 23, 42, 0.45) !important;
+      backdrop-filter: blur(4px) !important;
+    }
+    .swal2-popup.vi-swal-popup {
+      border: 1px solid rgba(56, 189, 248, 0.3) !important;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7) !important;
+    }
+
+    /* HIGH-END CUSTOM CODE INSPECTOR MODAL */
+    .custom-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease-in-out;
+    }
+    .custom-modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .custom-modal-container {
+      width: 92vw;
+      max-width: 1340px;
+      height: 84vh;
+      max-height: 880px;
+      background: #0f172a;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 12px;
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: scale(0.96);
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .custom-modal-overlay.open .custom-modal-container {
+      transform: scale(1);
+    }
+    .custom-modal-header {
+      padding: 12px 20px;
+      background: #1e293b;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .custom-modal-body {
+      flex: 1;
+      padding: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: #0b0f19;
+    }
+    .code-inspector-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      height: 100%;
+      width: 100%;
+    }
+    .code-card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .code-card-header {
+      padding: 8px 14px;
+      background: #1e293b;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .code-card-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      color: #f1f5f9;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+      min-width: 0;
+    }
+    .modal-copy-btn {
+      width: auto !important;
+      flex: none !important;
+      padding: 4px 12px !important;
+      font-size: 11px !important;
+      font-weight: 600 !important;
+      background: #0f172a !important;
+      color: #38bdf8 !important;
+      border: 1px solid rgba(56, 189, 248, 0.4) !important;
+      border-radius: 6px !important;
+      cursor: pointer !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 5px !important;
+      transition: all 0.15s ease !important;
+      white-space: nowrap !important;
+      box-shadow: none !important;
+    }
+    .modal-copy-btn:hover {
+      background: #2563eb !important;
+      color: #ffffff !important;
+      border-color: #2563eb !important;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
+    }
+
+    .modal-apply-btn {
+      width: auto !important;
+      flex: none !important;
+      padding: 6px 16px !important;
+      font-size: 12px !important;
+      font-weight: 700 !important;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+      color: #ffffff !important;
+      border: none !important;
+      border-radius: 6px !important;
+      cursor: pointer !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
+      transition: all 0.15s ease !important;
+      white-space: nowrap !important;
+    }
+    .modal-apply-btn:hover {
+      background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.6) !important;
+      transform: translateY(-1px);
+    }
+    .code-card-body {
+      flex: 1;
+      position: relative;
+      background: #0d1117;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <nav id="editor-nav">
+    <div class="nav-left">
+      <div class="brand-icon"><i class="fa-solid fa-code"></i></div>
+      <div class="template-title-wrap">
+        <span class="template-title" title="<%= title %>"><%= title %></span>
+        <span class="template-badge">ID: #<%= templateId %></span>
+        <span class="unsaved-indicator" id="unsaved-badge">
+          <i class="fa-solid fa-circle-dot"></i> Unsaved Changes
+        </span>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <!-- Undo / Redo Buttons -->
+      <button class="btn-action btn-secondary" onclick="undoAction()" title="Undo (Ctrl+Z)"><i class="fa-solid fa-rotate-left"></i> Undo</button>
+      <button class="btn-action btn-secondary" onclick="redoAction()" title="Redo (Ctrl+Y)"><i class="fa-solid fa-rotate-right"></i> Redo</button>
+
+      <!-- Toggle Codebase Button -->
+      <button class="btn-action btn-secondary" id="btn-toggle-code" onclick="toggleCodePanel()" title="Toggle Code Editor (Full Visual Canvas Mode)">
+        <i class="fa-solid fa-code"></i> Hide Code
+      </button>
+
+      <button class="btn-action btn-accent" onclick="formatAllCode()" title="Auto-format HTML, CSS & JavaScript">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Format
+      </button>
+
+      <!-- Global Domain Branding Button -->
+      <button class="btn-action btn-secondary" style="background: rgba(124, 58, 237, 0.2); color: #c084fc; border-color: rgba(168, 85, 247, 0.4);" onclick="VI.openGlobalBrandingModal()" title="Global Domain Branding Settings">
+        <i class="fa-solid fa-paintbrush"></i> Global Branding
+      </button>
+
+      <!-- PDF Print Preview Button -->
+      <button class="btn-action btn-secondary" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border-color: rgba(16, 185, 129, 0.4);" onclick="openPDFPrintPreview()" title="Open PDF Print View Preview">
+        <i class="fa-solid fa-file-pdf"></i> PDF Preview
+      </button>
+
+      <a href="/template/<%= templateId %>?domain_id=<%= domain_id %>&token=<%= token %>" class="btn-action btn-secondary">
+        <i class="fa-solid fa-arrow-left"></i> Drag & Drop Builder
+      </a>
+
+      <button class="btn-action btn-save" onclick="saveTemplate()" id="save-btn" title="Save changes (Ctrl+S)">
+        <i class="fa-solid fa-floppy-disk"></i> Save Template
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main App View -->
+  <main id="editor-app">
+    <!-- Left: Code Editor Panel -->
+    <section class="code-panel">
+      <div class="tab-bar">
+        <div class="tabs-group">
+          <button class="tab-btn active" onclick="switchEditorTab('html', this)">
+            <i class="fa-brands fa-html5" style="color: #e34f26;"></i> HTML
+          </button>
+          <button class="tab-btn" onclick="switchEditorTab('css', this)">
+            <i class="fa-brands fa-css3-alt" style="color: #1572b6;"></i> CSS
+          </button>
+          <button class="tab-btn" onclick="switchEditorTab('js', this)">
+            <i class="fa-brands fa-js" style="color: #f7df1e;"></i> JavaScript
+          </button>
+          <button class="tab-btn" onclick="switchEditorTab('split', this)">
+            <i class="fa-solid fa-table-columns"></i> Split Stack
+          </button>
+        </div>
+
+        <div class="editor-tools">
+          <select class="theme-select" id="theme-selector" onchange="changeAceTheme(this.value)">
+            <option value="ace/theme/one_dark" selected>One Dark</option>
+            <option value="ace/theme/monokai">Monokai</option>
+            <option value="ace/theme/dracula">Dracula</option>
+            <option value="ace/theme/tomorrow_night">Tomorrow Night</option>
+            <option value="ace/theme/chrome">Light Chrome</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="editors-wrapper" id="editors-container">
+        <!-- HTML Pane -->
+        <div class="editor-pane active" id="pane-html">
+          <div class="stacked-label" style="display: none;">HTML Editor</div>
+          <div class="ace-instance" id="ace-html"></div>
+        </div>
+
+        <!-- CSS Pane -->
+        <div class="editor-pane" id="pane-css">
+          <div class="stacked-label" style="display: none;">CSS Editor</div>
+          <div class="ace-instance" id="ace-css"></div>
+        </div>
+
+        <!-- JS Pane -->
+        <div class="editor-pane" id="pane-js">
+          <div class="stacked-label" style="display: none;">JavaScript Editor</div>
+          <div class="ace-instance" id="ace-js"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Real-time Live Preview & Visual Editor -->
+    <section class="preview-panel">
+      <div class="preview-toolbar">
+        <div class="viewport-group">
+          <button class="viewport-btn active" id="inspector-mode-btn" onclick="toggleInspectorMode()" title="Click any element in preview to style & move it">
+            <i class="fa-solid fa-arrow-pointer"></i> Click-to-Edit: ON
+          </button>
+          <span style="color: rgba(255,255,255,0.15);">|</span>
+          <button class="viewport-btn" id="layers-toggle-btn" onclick="toggleLayersPanel()" title="Open DOM Layers Tree Navigator">
+            <i class="fa-solid fa-layer-group"></i> Layers Tree
+          </button>
+          <span style="color: rgba(255,255,255,0.15);">|</span>
+          <button class="viewport-btn active" id="btn-a4-guides" onclick="toggleA4Guides()" title="Show/Hide A4 PDF Page Break Lines">
+            <i class="fa-solid fa-scissors"></i> A4 Guides: ON
+          </button>
+          <span style="color: rgba(255,255,255,0.15);">|</span>
+          <button class="viewport-btn" onclick="setViewport('100%', this)" title="Full Width">
+            <i class="fa-solid fa-desktop"></i> Full
+          </button>
+          <button class="viewport-btn" onclick="setViewport('795px', this)" title="A4 Print Width">
+            <i class="fa-solid fa-file-invoice"></i> A4
+          </button>
+          <button class="viewport-btn" onclick="setViewport('375px', this)" title="Mobile Width">
+            <i class="fa-solid fa-mobile-screen-button"></i> Mobile
+          </button>
+        </div>
+
+        <div class="preview-actions">
+          <button class="btn-action btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="VI.insertBlock('pagebreak')" title="Insert A4 Page Break Here">
+            <i class="fa-solid fa-scissors"></i> + Break
+          </button>
+          <label class="preview-toggle-label">
+            <input type="checkbox" id="auto-refresh-toggle" checked> Live Sync
+          </label>
+          <button class="btn-action btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="renderPreview()" title="Refresh Preview">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+          <button class="btn-action btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="openPreviewTab()" title="Open in new window">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- DOM Breadcrumbs Hierarchy Bar -->
+      <div class="preview-breadcrumbs-bar" id="preview-breadcrumbs">
+        <span>Hierarchy:</span>
+        <span class="breadcrumb-item">body</span>
+      </div>
+
+      <div class="preview-frame-container">
+        <iframe id="preview-iframe"></iframe>
+      </div>
+
+      <!-- VISUAL LAYERS TREE NAVIGATOR DRAWER -->
+      <div id="layers-tree-panel">
+        <div class="vi-header">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-layer-group" style="color: var(--accent-blue);"></i>
+            <span style="font-weight: 700; color: #fff;">Page Sections &amp; Layers</span>
+          </div>
+          <button class="vi-close-btn" onclick="toggleLayersPanel()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div style="padding: 6px 8px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 4px;">
+          <input type="text" class="vi-input" id="layer-search-input" placeholder="🔍 Search layers..." oninput="filterLayersTree(this.value)">
+          <div style="display: flex; gap: 4px;">
+            <button class="vi-btn" style="padding: 2px 6px; font-size: 10px;" onclick="collapseAllLayers()"><i class="fa-solid fa-compress"></i> Collapse All</button>
+            <button class="vi-btn" style="padding: 2px 6px; font-size: 10px;" onclick="expandAllLayers()"><i class="fa-solid fa-expand"></i> Expand All</button>
+          </div>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: 8px;" id="layers-tree-body">
+          <!-- Tree populated dynamically -->
+        </div>
+      </div>
+
+      <!-- ADVANCED VISUAL STYLE INSPECTOR DRAWER -->
+      <div id="visual-inspector-panel">
+        <div class="vi-header">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="vi-tag-badge" id="vi-tag-badge">DIV</span>
+            <span class="vi-class-badge" id="vi-class-badge">.container</span>
+          </div>
+          <button class="vi-close-btn" onclick="closeVisualInspector()" title="Close Inspector"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <!-- Sub-Tabs Bar -->
+        <div class="vi-subtabs">
+          <button class="vi-subtab active" onclick="switchViSubtab('style', this)">🎨 Style</button>
+          <button class="vi-subtab" onclick="switchViSubtab('bg', this)">🌄 Background</button>
+          <button class="vi-subtab" onclick="switchViSubtab('border', this)">🖼️ Border &amp; Radius</button>
+          <button class="vi-subtab" onclick="switchViSubtab('shadow', this)">✨ Shadows</button>
+          <button class="vi-subtab" onclick="switchViSubtab('effects', this)">💡 Effects</button>
+          <button class="vi-subtab" onclick="switchViSubtab('layout', this)">📐 Layout</button>
+          <button class="vi-subtab" onclick="switchViSubtab('media', this)">⚙️ Media/Link</button>
+        </div>
+
+        <div class="vi-body">
+          <!-- Quick Move, Parent, Clone, Delete Header Toolbar -->
+          <div class="vi-section" style="background: rgba(30, 41, 59, 0.6); padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);">
+            <div class="vi-section-title" style="margin-bottom: 6px;">Element Actions</div>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px;">
+              <button class="vi-btn" onclick="VI.moveSelectedUp()" title="Move Element Up"><i class="fa-solid fa-arrow-up"></i> Move Up</button>
+              <button class="vi-btn" onclick="VI.moveSelectedDown()" title="Move Element Down"><i class="fa-solid fa-arrow-down"></i> Move Down</button>
+              <button class="vi-btn" onclick="VI.selectParent()" title="Select Parent Container"><i class="fa-solid fa-turn-up"></i> Parent</button>
+              <button class="vi-btn" style="background: rgba(37, 99, 235, 0.2); color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);" onclick="VI.openAddElementModal()" title="Add Custom Element or HTML Snippet Before / After / Inside"><i class="fa-solid fa-plus"></i> + Add</button>
+              <button class="vi-btn" onclick="VI.duplicateSelected()" title="Duplicate Element"><i class="fa-solid fa-copy"></i> Clone</button>
+              <button class="vi-btn" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.3);" onclick="VI.deleteSelected()" title="Delete Element"><i class="fa-solid fa-trash"></i> Delete</button>
+            </div>
+
+            <!-- Insert New Block Palette -->
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <select class="vi-select" id="vi-insert-block-select">
+                <option value="paragraph">📝 Paragraph</option>
+                <option value="heading">🏷️ Heading</option>
+                <option value="button">🔘 Button</option>
+                <option value="image">🖼️ Image</option>
+                <option value="divider">➖ Divider Line</option>
+                <option value="box">📦 Container Box</option>
+                <option value="tablerow">📊 Table Row</option>
+                <option value="pagebreak">✂️ A4 Page Break</option>
+              </select>
+              <button class="vi-btn active" style="padding: 4px 10px;" onclick="VI.insertSelectedBlock()"><i class="fa-solid fa-plus"></i> Add Block</button>
+            </div>
+          </div>
+
+          <!-- ── PANE 1: STYLE (Text, Fonts, Colors, Spacing) ── -->
+          <div class="vi-pane active" id="vi-pane-style">
+            <div class="vi-section">
+              <div class="vi-section-title">Text Content</div>
+              <textarea id="vi-text-content" class="vi-input" rows="2" placeholder="Edit inner text..." oninput="VI.applyText(this.value)"></textarea>
+              
+              <!-- Invoice Variables Tag Picker -->
+              <div style="margin-top: 6px;">
+                <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 4px;">Insert Dynamic Variable:</div>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                  <button class="vi-preset-chip" onclick="VI.insertVariable('[cname]')">[cname]</button>
+                  <button class="vi-preset-chip" onclick="VI.insertVariable('[cemail]')">[cemail]</button>
+                  <button class="vi-preset-chip" onclick="VI.insertVariable('[Pricequote]')">[Pricequote]</button>
+                  <button class="vi-preset-chip" onclick="VI.insertVariable('[actual_amount]')">[actual_amount]</button>
+                  <button class="vi-preset-chip" onclick="VI.insertVariable('[business_title]')">[business_title]</button>
+                  <button class="vi-preset-chip" onclick="VI.insertVariable('[TotalAmount1]')">[TotalAmount1]</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">Typography</div>
+              <div class="vi-row">
+                <span class="vi-label">Font Family</span>
+                <div class="vi-control">
+                  <select class="vi-select" id="vi-font-family" onchange="VI.applyStyle('font-family', this.value)">
+                    <option value="">— inherit —</option>
+                    <option value="'Inter', sans-serif">Inter</option>
+                    <option value="'Poppins', sans-serif">Poppins</option>
+                    <option value="'Roboto', sans-serif">Roboto</option>
+                    <option value="'Montserrat', sans-serif">Montserrat</option>
+                    <option value="'Playfair Display', serif">Playfair Display</option>
+                    <option value="Arial, sans-serif">Arial</option>
+                    <option value="'Georgia', serif">Georgia</option>
+                    <option value="'Courier New', monospace">Courier New</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="vi-row">
+                <span class="vi-label">Size</span>
+                <div class="vi-control">
+                  <input type="range" class="vi-range" id="vi-font-size-range" min="8" max="96" value="14" oninput="document.getElementById('vi-font-size-num').value=this.value; VI.applyStyle('font-size', this.value+'px');">
+                  <input type="number" class="vi-input" style="width: 50px; text-align: center;" id="vi-font-size-num" value="14" oninput="document.getElementById('vi-font-size-range').value=this.value; VI.applyStyle('font-size', this.value+'px');">
+                </div>
+              </div>
+
+              <div class="vi-row">
+                <span class="vi-label">Text Color</span>
+                <div class="vi-control">
+                  <div class="vi-color-swatch">
+                    <input type="color" id="vi-color-picker" value="#000000" oninput="document.getElementById('vi-color-hex').value=this.value; VI.applyStyle('color', this.value);">
+                  </div>
+                  <input type="text" class="vi-input" id="vi-color-hex" value="#000000" oninput="VI.applyStyle('color', this.value);">
+                </div>
+              </div>
+              <div style="display: flex; gap: 4px; margin-top: 4px; justify-content: flex-end; margin-bottom: 6px;">
+                <button class="vi-preset-chip" style="font-size: 9px; padding: 2px 6px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);" onclick="VI.applyBrandColor('color', 'primary')" title="Apply Global Primary Brand Color">🎨 Brand Primary</button>
+                <button class="vi-preset-chip" style="font-size: 9px; padding: 2px 6px; background: rgba(168, 85, 247, 0.15); color: #c084fc; border-color: rgba(168, 85, 247, 0.3);" onclick="VI.applyBrandColor('color', 'secondary')" title="Apply Global Secondary Brand Color">🎨 Brand Secondary</button>
+              </div>
+
+              <div class="vi-row">
+                <span class="vi-label">Align</span>
+                <div class="vi-control">
+                  <div class="vi-btn-group">
+                    <button class="vi-btn" onclick="VI.applyStyle('text-align', 'left')"><i class="fa-solid fa-align-left"></i></button>
+                    <button class="vi-btn" onclick="VI.applyStyle('text-align', 'center')"><i class="fa-solid fa-align-center"></i></button>
+                    <button class="vi-btn" onclick="VI.applyStyle('text-align', 'right')"><i class="fa-solid fa-align-right"></i></button>
+                    <button class="vi-btn" onclick="VI.applyStyle('text-align', 'justify')"><i class="fa-solid fa-align-justify"></i></button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="vi-row">
+                <span class="vi-label">Weight</span>
+                <div class="vi-control">
+                  <select class="vi-select" id="vi-font-weight" onchange="VI.applyStyle('font-weight', this.value)">
+                    <option value="300">300 Light</option>
+                    <option value="400">400 Normal</option>
+                    <option value="500">500 Medium</option>
+                    <option value="600">600 SemiBold</option>
+                    <option value="700">700 Bold</option>
+                    <option value="800">800 ExtraBold</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">Background Color</div>
+              <div class="vi-row">
+                <span class="vi-label">BG Color</span>
+                <div class="vi-control">
+                  <div class="vi-color-swatch">
+                    <input type="color" id="vi-bg-picker" value="#ffffff" oninput="document.getElementById('vi-bg-hex').value=this.value; VI.applyStyle('background-color', this.value);">
+                  </div>
+                  <input type="text" class="vi-input" id="vi-bg-hex" placeholder="transparent / #hex" oninput="VI.applyStyle('background-color', this.value);">
+                </div>
+              </div>
+              <div style="display: flex; gap: 4px; margin-top: 4px; justify-content: flex-end;">
+                <button class="vi-preset-chip" style="font-size: 9px; padding: 2px 6px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);" onclick="VI.applyBrandColor('background-color', 'primary')" title="Apply Global Primary Brand Color">🎨 Brand Primary</button>
+                <button class="vi-preset-chip" style="font-size: 9px; padding: 2px 6px; background: rgba(168, 85, 247, 0.15); color: #c084fc; border-color: rgba(168, 85, 247, 0.3);" onclick="VI.applyBrandColor('background-color', 'secondary')" title="Apply Global Secondary Brand Color">🎨 Brand Secondary</button>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">Padding (Inside)</div>
+              <div class="vi-row">
+                <div class="vi-quad">
+                  <input type="text" class="vi-quad-input" id="vi-pt" placeholder="Top" oninput="VI.applyStyle('padding-top', this.value)">
+                  <input type="text" class="vi-quad-input" id="vi-pr" placeholder="Right" oninput="VI.applyStyle('padding-right', this.value)">
+                  <input type="text" class="vi-quad-input" id="vi-pb" placeholder="Bottom" oninput="VI.applyStyle('padding-bottom', this.value)">
+                  <input type="text" class="vi-quad-input" id="vi-pl" placeholder="Left" oninput="VI.applyStyle('padding-left', this.value)">
+                </div>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">Margin (Outside)</div>
+              <div class="vi-row">
+                <div class="vi-quad">
+                  <input type="text" class="vi-quad-input" id="vi-mt" placeholder="Top" oninput="VI.applyStyle('margin-top', this.value)">
+                  <input type="text" class="vi-quad-input" id="vi-mr" placeholder="Right" oninput="VI.applyStyle('margin-right', this.value)">
+                  <input type="text" class="vi-quad-input" id="vi-mb" placeholder="Bottom" oninput="VI.applyStyle('margin-bottom', this.value)">
+                  <input type="text" class="vi-quad-input" id="vi-ml" placeholder="Left" oninput="VI.applyStyle('margin-left', this.value)">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── PANE: BACKGROUND (IMAGE & COLOR & GRADIENTS) ── -->
+          <div class="vi-pane" id="vi-pane-bg">
+            <div class="vi-section">
+              <div class="vi-section-title"><i class="fa-solid fa-image" style="color: #38bdf8;"></i> Background Image (For Any Element)</div>
+              <div class="vi-row">
+                <span class="vi-label">Image URL</span>
+                <div class="vi-control">
+                  <input type="text" class="vi-input" id="vi-bg-img-url" placeholder="https://example.com/bg.png" oninput="VI.applyBackgroundImage(this.value)">
+                </div>
+              </div>
+              <!-- Preview Card -->
+              <div style="margin-top: 8px; text-align: center;">
+                <img id="vi-bg-img-preview" src="" style="max-width: 100%; max-height: 110px; border-radius: 6px; border: 1px solid var(--border-color); display: none; object-fit: cover; margin: 0 auto 6px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+                <button class="vi-btn" style="font-size: 10px; padding: 3px 10px; background: rgba(239,68,68,0.2); color: #f87171; border-color: rgba(239,68,68,0.4); margin: 0 auto;" onclick="document.getElementById('vi-bg-img-url').value=''; VI.applyBackgroundImage('');"><i class="fa-solid fa-trash"></i> Remove Background Image</button>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">Background Display &amp; Positioning</div>
+              <div class="vi-row">
+                <span class="vi-label">Size</span>
+                <div class="vi-control" style="flex-direction: column; align-items: stretch; gap: 4px;">
+                  <select class="vi-select" id="vi-bg-size" onchange="VI.handleBgSizeSelect(this.value)">
+                    <option value="cover">cover (Fill Container)</option>
+                    <option value="contain">contain (Fit Inside)</option>
+                    <option value="100% 100%">100% 100% (Stretch)</option>
+                    <option value="auto">auto (Original Size)</option>
+                    <option value="custom">⚙️ Custom Size (e.g. 100% 45px)...</option>
+                  </select>
+                  <input type="text" class="vi-input" id="vi-bg-size-custom" placeholder="e.g. 100% 45px or 350px auto" style="display: none;" oninput="VI.applyStyle('background-size', this.value)">
+                </div>
+              </div>
+
+              <div class="vi-row">
+                <span class="vi-label">Position</span>
+                <div class="vi-control" style="flex-direction: column; align-items: stretch; gap: 4px;">
+                  <select class="vi-select" id="vi-bg-pos" onchange="VI.handleBgPosSelect(this.value)">
+                    <option value="center center">center center</option>
+                    <option value="top left">top left</option>
+                    <option value="top center">top center</option>
+                    <option value="top right">top right</option>
+                    <option value="center left">center left</option>
+                    <option value="center right">center right</option>
+                    <option value="bottom center">bottom center</option>
+                    <option value="custom">⚙️ Custom Position (e.g. center -10px)...</option>
+                  </select>
+                  <input type="text" class="vi-input" id="vi-bg-pos-custom" placeholder="e.g. center -10px or left 5px top 2px" style="display: none;" oninput="VI.applyStyle('background-position', this.value)">
+                </div>
+              </div>
+
+              <div class="vi-row">
+                <span class="vi-label">Repeat</span>
+                <div class="vi-control">
+                  <select class="vi-select" id="vi-bg-repeat" onchange="VI.applyStyle('background-repeat', this.value)">
+                    <option value="no-repeat">no-repeat (Single Image)</option>
+                    <option value="repeat">repeat (Tile Image)</option>
+                    <option value="repeat-x">repeat-x (Horizontal Tile)</option>
+                    <option value="repeat-y">repeat-y (Vertical Tile)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="vi-row">
+                <span class="vi-label">Attachment</span>
+                <div class="vi-control">
+                  <select class="vi-select" id="vi-bg-attach" onchange="VI.applyStyle('background-attachment', this.value)">
+                    <option value="scroll">scroll (Normal)</option>
+                    <option value="fixed">fixed (Parallax Effect)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">Background Color &amp; Presets</div>
+              <div class="vi-row">
+                <span class="vi-label">BG Color</span>
+                <div class="vi-control">
+                  <div class="vi-color-swatch">
+                    <input type="color" id="vi-bg-picker-2" value="#ffffff" oninput="document.getElementById('vi-bg-hex-2').value=this.value; VI.applyStyle('background-color', this.value);">
+                  </div>
+                  <input type="text" class="vi-input" id="vi-bg-hex-2" placeholder="transparent / #hex" oninput="VI.applyStyle('background-color', this.value);">
+                </div>
+              </div>
+              <div style="display: flex; gap: 4px; margin-top: 4px; justify-content: flex-end; margin-bottom: 6px;">
+                <button class="vi-preset-chip" style="font-size: 9px; padding: 2px 6px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);" onclick="VI.applyBrandColor('background-color', 'primary')">🎨 Brand Primary</button>
+                <button class="vi-preset-chip" style="font-size: 9px; padding: 2px 6px; background: rgba(168, 85, 247, 0.15); color: #c084fc; border-color: rgba(168, 85, 247, 0.3);" onclick="VI.applyBrandColor('background-color', 'secondary')">🎨 Brand Secondary</button>
+                <button class="vi-preset-chip" style="font-size: 9px; padding: 2px 6px; background: rgba(255, 255, 255, 0.1); color: #fff;" onclick="VI.applyStyle('background-color', 'transparent')">🚫 Transparent</button>
+              </div>
+
+              <div class="vi-section-title" style="margin-top: 10px;">Gradient Background Presets</div>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px;">
+                <button class="vi-preset-chip" onclick="VI.applyStyle('background', 'linear-gradient(135deg, #0f172a, #1e293b)')">✨ Dark Slate</button>
+                <button class="vi-preset-chip" onclick="VI.applyStyle('background', 'linear-gradient(135deg, #ff4c00, #ff8c00)')">🔥 Warm Orange</button>
+                <button class="vi-preset-chip" onclick="VI.applyStyle('background', 'linear-gradient(135deg, #2563eb, #38bdf8)')">🌊 Ocean Blue</button>
+                <button class="vi-preset-chip" onclick="VI.applyStyle('background', 'linear-gradient(135deg, #059669, #10b981)')">🌿 Emerald</button>
+                <button class="vi-preset-chip" onclick="VI.applyStyle('background', 'linear-gradient(135deg, #7c3aed, #4f46e5)')">🟣 Royal Purple</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── PANE 2: BORDER & RADIUS (Advanced) ── -->
+          <div class="vi-pane" id="vi-pane-border">
+            <div class="vi-section">
+              <div class="vi-section-title">All Corners Radius</div>
+              <div class="vi-row">
+                <span class="vi-label">Border Radius</span>
+                <div class="vi-control">
+                  <input type="range" class="vi-range" id="vi-radius-range" min="0" max="100" value="0" oninput="document.getElementById('vi-radius-num').value=this.value; VI.applyStyle('border-radius', this.value+'px');">
+                  <input type="number" class="vi-input" style="width: 50px; text-align: center;" id="vi-radius-num" value="0" oninput="document.getElementById('vi-radius-range').value=this.value; VI.applyStyle('border-radius', this.value+'px');">
+                </div>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">Individual Corner Radii</div>
+              <div class="vi-row">
+                <div class="vi-quad">
+                  <input type="text" class="vi-quad-input" id="vi-rtl" placeholder="Top-L" oninput="VI.applyStyle('border-top-left-radius', this.value)">
+                  <input type="text" class="vi-quad-input" id="vi-rtr" placeholder="Top-R" oninput="VI.applyStyle('border-top-right-radius', this.value)">
+                  <input type="text" class="vi-quad-input" id="vi-rbl" placeholder="Btm-L" oninput="VI.applyStyle('border-bottom-left-radius', this.value)">
+                  <input type="text" class="vi-quad-input" id="vi-rbr" placeholder="Btm-R" oninput="VI.applyStyle('border-bottom-right-radius', this.value)">
+                </div>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">Border Style &amp; Width</div>
+              <div class="vi-row">
+                <span class="vi-label">Style</span>
+                <div class="vi-control">
+                  <select class="vi-select" id="vi-border-style" onchange="VI.applyStyle('border-style', this.value)">
+                    <option value="none">none</option>
+                    <option value="solid">solid</option>
+                    <option value="dashed">dashed</option>
+                    <option value="dotted">dotted</option>
+                    <option value="double">double</option>
+                    <option value="groove">groove</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="vi-row">
+                <span class="vi-label">Width</span>
+                <div class="vi-control">
+                  <input type="range" class="vi-range" id="vi-bw-range" min="0" max="25" value="0" oninput="document.getElementById('vi-bw-num').value=this.value; VI.applyStyle('border-width', this.value+'px');">
+                  <input type="number" class="vi-input" style="width: 50px; text-align: center;" id="vi-bw-num" value="0" oninput="document.getElementById('vi-bw-range').value=this.value; VI.applyStyle('border-width', this.value+'px');">
+                </div>
+              </div>
+
+              <div class="vi-row">
+                <span class="vi-label">Border Color</span>
+                <div class="vi-control">
+                  <div class="vi-color-swatch">
+                    <input type="color" id="vi-border-picker" value="#000000" oninput="document.getElementById('vi-border-hex').value=this.value; VI.applyStyle('border-color', this.value);">
+                  </div>
+                  <input type="text" class="vi-input" id="vi-border-hex" placeholder="#hex" oninput="VI.applyStyle('border-color', this.value);">
+                </div>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">Outline</div>
+              <div class="vi-row">
+                <span class="vi-label">Outline</span>
+                <div class="vi-control">
+                  <input type="text" class="vi-input" id="vi-outline" placeholder="2px solid #38bdf8" oninput="VI.applyStyle('outline', this.value)">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── PANE 3: SHADOWS & GLOWS ── -->
+          <div class="vi-pane" id="vi-pane-shadow">
+            <div class="vi-section">
+              <div class="vi-section-title">Box Shadow Presets</div>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px;">
+                <button class="vi-preset-chip" onclick="VI.applyStyle('box-shadow', '0 4px 12px rgba(0,0,0,0.12)')">Soft Drop</button>
+                <button class="vi-preset-chip" onclick="VI.applyStyle('box-shadow', '0 10px 25px rgba(0,0,0,0.25)')">Elevation</button>
+                <button class="vi-preset-chip" onclick="VI.applyStyle('box-shadow', '0 0 20px rgba(56,189,248,0.5)')">Blue Glow</button>
+                <button class="vi-preset-chip" onclick="VI.applyStyle('box-shadow', '0 0 20px rgba(34,197,94,0.5)')">Green Glow</button>
+                <button class="vi-preset-chip" onclick="VI.applyStyle('box-shadow', 'inset 0 2px 6px rgba(0,0,0,0.3)')">Inset Shadow</button>
+                <button class="vi-preset-chip" onclick="VI.applyStyle('box-shadow', 'none')">None</button>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">Custom Box Shadow</div>
+              <div class="vi-row">
+                <span class="vi-label">Offset X</span>
+                <div class="vi-control">
+                  <input type="range" class="vi-range" id="vi-bs-x" min="-30" max="30" value="0" oninput="VI.updateCustomShadow()">
+                </div>
+              </div>
+              <div class="vi-row">
+                <span class="vi-label">Offset Y</span>
+                <div class="vi-control">
+                  <input type="range" class="vi-range" id="vi-bs-y" min="-30" max="30" value="4" oninput="VI.updateCustomShadow()">
+                </div>
+              </div>
+              <div class="vi-row">
+                <span class="vi-label">Blur</span>
+                <div class="vi-control">
+                  <input type="range" class="vi-range" id="vi-bs-blur" min="0" max="60" value="12" oninput="VI.updateCustomShadow()">
+                </div>
+              </div>
+              <div class="vi-row">
+                <span class="vi-label">Color</span>
+                <div class="vi-control">
+                  <input type="color" id="vi-bs-color" value="#000000" oninput="VI.updateCustomShadow()">
+                </div>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">Text Shadow</div>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px;">
+                <button class="vi-preset-chip" onclick="VI.applyStyle('text-shadow', '1px 1px 3px rgba(0,0,0,0.5)')">Subtle Text</button>
+                <button class="vi-preset-chip" onclick="VI.applyStyle('text-shadow', '0 0 10px rgba(56,189,248,0.8)')">Neon Text</button>
+                <button class="vi-preset-chip" onclick="VI.applyStyle('text-shadow', '2px 2px 0px #000')">Retro 3D</button>
+                <button class="vi-preset-chip" onclick="VI.applyStyle('text-shadow', 'none')">None</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── PANE 4: EFFECTS & FILTERS ── -->
+          <div class="vi-pane" id="vi-pane-effects">
+            <div class="vi-section">
+              <div class="vi-section-title">Opacity &amp; Visibility</div>
+              <div class="vi-row">
+                <span class="vi-label">Opacity</span>
+                <div class="vi-control">
+                  <input type="range" class="vi-range" id="vi-opacity" min="0" max="1" step="0.05" value="1" oninput="VI.applyStyle('opacity', this.value)">
+                </div>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">CSS Filters</div>
+              <div class="vi-row">
+                <span class="vi-label">Blur</span>
+                <div class="vi-control">
+                  <input type="range" class="vi-range" id="vi-filter-blur" min="0" max="20" value="0" oninput="VI.updateFilters()">
+                </div>
+              </div>
+              <div class="vi-row">
+                <span class="vi-label">Brightness</span>
+                <div class="vi-control">
+                  <input type="range" class="vi-range" id="vi-filter-bright" min="50" max="200" value="100" oninput="VI.updateFilters()">
+                </div>
+              </div>
+              <div class="vi-row">
+                <span class="vi-label">Grayscale</span>
+                <div class="vi-control">
+                  <input type="range" class="vi-range" id="vi-filter-gray" min="0" max="100" value="0" oninput="VI.updateFilters()">
+                </div>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">Transform (Rotate &amp; Scale)</div>
+              <div class="vi-row">
+                <span class="vi-label">Rotate</span>
+                <div class="vi-control">
+                  <input type="range" class="vi-range" id="vi-rotate" min="-180" max="180" value="0" oninput="VI.updateTransform()">
+                </div>
+              </div>
+              <div class="vi-row">
+                <span class="vi-label">Scale</span>
+                <div class="vi-control">
+                  <input type="range" class="vi-range" id="vi-scale" min="0.5" max="2" step="0.05" value="1" oninput="VI.updateTransform()">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── PANE 5: LAYOUT & SPACING ── -->
+          <div class="vi-pane" id="vi-pane-layout">
+            <div class="vi-section">
+              <div class="vi-section-title">Display &amp; Position</div>
+              <div class="vi-row">
+                <span class="vi-label">Display</span>
+                <div class="vi-control">
+                  <select class="vi-select" id="vi-display" onchange="VI.applyStyle('display', this.value)">
+                    <option value="">default</option>
+                    <option value="block">block</option>
+                    <option value="inline-block">inline-block</option>
+                    <option value="flex">flex</option>
+                    <option value="grid">grid</option>
+                    <option value="inline">inline</option>
+                    <option value="none">none</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="vi-row">
+                <span class="vi-label">Flex Direction</span>
+                <div class="vi-control">
+                  <div class="vi-btn-group">
+                    <button class="vi-btn" onclick="VI.applyStyle('flex-direction', 'row')">Row →</button>
+                    <button class="vi-btn" onclick="VI.applyStyle('flex-direction', 'column')">Col ↓</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="vi-row">
+                <span class="vi-label">Justify</span>
+                <div class="vi-control">
+                  <select class="vi-select" id="vi-justify" onchange="VI.applyStyle('justify-content', this.value)">
+                    <option value="">— inherit —</option>
+                    <option value="flex-start">flex-start</option>
+                    <option value="center">center</option>
+                    <option value="flex-end">flex-end</option>
+                    <option value="space-between">space-between</option>
+                    <option value="space-around">space-around</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">Dimensions</div>
+              <div class="vi-row">
+                <span class="vi-label">Width</span>
+                <div class="vi-control">
+                  <input type="text" class="vi-input" id="vi-width" placeholder="e.g. 100% or 300px" oninput="VI.applyStyle('width', this.value)">
+                </div>
+              </div>
+              <div class="vi-row">
+                <span class="vi-label">Height</span>
+                <div class="vi-control">
+                  <input type="text" class="vi-input" id="vi-height" placeholder="e.g. auto or 200px" oninput="VI.applyStyle('height', this.value)">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── PANE 6: MEDIA / LINK / ATTRS ── -->
+          <div class="vi-pane" id="vi-pane-media">
+            <div class="vi-section">
+              <div class="vi-section-title">Image Tag Properties (&lt;img&gt; only)</div>
+              <div class="vi-row">
+                <span class="vi-label">Image Src URL</span>
+                <div class="vi-control">
+                  <input type="text" class="vi-input" id="vi-img-src" placeholder="https://..." oninput="VI.applyAttr('src', this.value)">
+                </div>
+              </div>
+            </div>
+
+            <div class="vi-section" style="background: rgba(56, 189, 248, 0.05); border: 1px dashed rgba(56, 189, 248, 0.3); padding: 8px; border-radius: 6px;">
+              <div class="vi-section-title"><i class="fa-solid fa-image" style="color: #38bdf8;"></i> Background Image (For Any Element - Table, Cell, Div)</div>
+              <div class="vi-row">
+                <span class="vi-label">BG Image URL</span>
+                <div class="vi-control">
+                  <input type="text" class="vi-input" id="vi-bg-img-url-media" placeholder="https://example.com/bg.png" oninput="document.getElementById('vi-bg-img-url').value=this.value; VI.applyBackgroundImage(this.value)">
+                </div>
+              </div>
+              <div class="vi-row">
+                <span class="vi-label">BG Size</span>
+                <div class="vi-control" style="flex-direction: column; align-items: stretch; gap: 4px;">
+                  <select class="vi-select" id="vi-bg-size-media" onchange="VI.handleBgSizeSelect(this.value)">
+                    <option value="cover">cover (Fill Container)</option>
+                    <option value="contain">contain (Fit Inside)</option>
+                    <option value="100% 100%">100% 100% (Stretch)</option>
+                    <option value="auto">auto (Original Size)</option>
+                    <option value="custom">⚙️ Custom Size (e.g. 100% 45px)...</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">Link Properties</div>
+              <div class="vi-row">
+                <span class="vi-label">Href URL</span>
+                <div class="vi-control">
+                  <input type="text" class="vi-input" id="vi-link-href" placeholder="https://..." oninput="VI.applyAttr('href', this.value)">
+                </div>
+              </div>
+            </div>
+
+            <div class="vi-section">
+              <div class="vi-section-title">Element ID &amp; Class</div>
+              <div class="vi-row">
+                <span class="vi-label">Element ID</span>
+                <div class="vi-control">
+                  <input type="text" class="vi-input" id="vi-el-id" placeholder="my-custom-id" oninput="VI.applyAttr('id', this.value)">
+                </div>
+              </div>
+              <div class="vi-row">
+                <span class="vi-label">Classes</span>
+                <div class="vi-control">
+                  <input type="text" class="vi-input" id="vi-el-class" placeholder="class1 class2" oninput="VI.applyAttr('class', this.value)">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Associated CSS & HTML Code Copy Box -->
+          <div class="vi-section" style="margin-top: 12px; background: rgba(15, 23, 42, 0.7); padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 4px;">
+              <span class="vi-section-title" style="margin: 0; color: #38bdf8;"><i class="fa-solid fa-code"></i> Associated Code &amp; CSS</span>
+              <div style="display: flex; gap: 4px;">
+                <button class="vi-btn" style="padding: 2px 6px; font-size: 10px; background: rgba(255,255,255,0.1); color: #ffffff;" onclick="VI.expandAssociatedCodeModal()" title="Expand Fullscreen Side-by-Side View"><i class="fa-solid fa-expand"></i> Expand View</button>
+                <button class="vi-btn" style="padding: 2px 6px; font-size: 10px; background: #2563eb; color: #ffffff; border-color: #2563eb;" onclick="VI.copyElementCSS()" title="Copy Full CSS (Element &amp; Children) to Clipboard"><i class="fa-solid fa-copy"></i> Copy CSS</button>
+                <button class="vi-btn" style="padding: 2px 6px; font-size: 10px; background: #0284c7; color: #ffffff; border-color: #0284c7;" onclick="VI.copyElementHTML()" title="Copy HTML Snippet to Clipboard"><i class="fa-solid fa-code"></i> Copy HTML</button>
+              </div>
+            </div>
+            <textarea id="vi-associated-code-box" class="vi-input" style="font-family: monospace; font-size: 11px; height: 220px; color: #38bdf8; background: #0f172a; resize: vertical; line-height: 1.4;" readonly placeholder="Select an element to view its CSS rules and HTML snippet..."></textarea>
+          </div>
+
+          <!-- Bottom Actions -->
+          <div class="vi-section" style="margin-top: 10px;">
+            <div style="display: flex; gap: 6px;">
+              <button class="vi-btn" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.3);" onclick="VI.deleteSelected()"><i class="fa-solid fa-trash"></i> Delete</button>
+              <button class="vi-btn" onclick="VI.duplicateSelected()"><i class="fa-solid fa-copy"></i> Duplicate</button>
+              <button class="vi-btn" onclick="VI.clearStyles()"><i class="fa-solid fa-eraser"></i> Clear Styles</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- STUNNING FULLSCREEN COMPONENT CODE & CSS INSPECTOR MODAL -->
+  <div id="expanded-code-modal" class="custom-modal-overlay">
+    <div class="custom-modal-container">
+      <!-- Modal Header -->
+      <div class="custom-modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(56, 189, 248, 0.15); display: flex; align-items: center; justify-content: center; color: #38bdf8; font-size: 16px;">
+            <i class="fa-solid fa-code"></i>
+          </div>
+          <div>
+            <div style="font-weight: 700; color: #ffffff; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+              <span>Full Component Code &amp; CSS Inspector</span>
+              <span id="modal-target-badge" style="font-family: monospace; font-size: 11px; background: #0f172a; color: #38bdf8; padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(56,189,248,0.3);">&lt;div&gt;</span>
+            </div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 1px;">Live edit CSS rules and HTML snippet for this component and its children</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button class="modal-apply-btn" onclick="VI.applyModalChangesToTemplate()" title="Apply edits to template (Ctrl+S)">
+            <i class="fa-solid fa-bolt"></i> Apply Changes to Template
+          </button>
+          <button class="vi-close-btn" onclick="VI.closeExpandedCodeModal()" title="Close (Esc)"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>
+
+      <!-- Modal Body Grid -->
+      <div class="custom-modal-body">
+        <div class="code-inspector-grid">
+          <!-- Left: CSS Rules Editor Card -->
+          <div class="code-card">
+            <div class="code-card-header">
+              <div class="code-card-title">
+                <i class="fa-solid fa-paintbrush" style="color: #38bdf8; font-size: 12px;"></i>
+                <span>Associated CSS Rules (Element &amp; All Children)</span>
+              </div>
+              <button class="modal-copy-btn" onclick="VI.copyModalAceCSS()">
+                <i class="fa-solid fa-copy"></i> Copy CSS
+              </button>
+            </div>
+            <div class="code-card-body">
+              <div id="modal-ace-css" style="width: 100%; height: 100%;"></div>
+            </div>
+          </div>
+
+          <!-- Right: HTML Snippet Editor Card -->
+          <div class="code-card">
+            <div class="code-card-header">
+              <div class="code-card-title">
+                <i class="fa-solid fa-code" style="color: #38bdf8; font-size: 12px;"></i>
+                <span>Component HTML Snippet</span>
+              </div>
+              <button class="modal-copy-btn" onclick="VI.copyModalAceHTML()">
+                <i class="fa-solid fa-code"></i> Copy HTML
+              </button>
+            </div>
+            <div class="code-card-body">
+              <div id="modal-ace-html" style="width: 100%; height: 100%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const INITIAL_HTML = <%- JSON.stringify(html || '') %>;
+    const INITIAL_CSS = <%- JSON.stringify(css || '') %>;
+    const INITIAL_JS = <%- JSON.stringify(customjs || js || '') %>;
+    const TEMPLATE_ID = <%= templateId %>;
+    const DOMAIN_ID = <%= domain_id %>;
+
+    let htmlAce, cssAce, jsAce;
+    let isDirty = false;
+    let previewDebounceTimer = null;
+    let isInspectorActive = true;
+    let isSyncingFromVI = false;
+    let draggedElement = null;
+    let isCodePanelVisible = true;
+    let isLayersPanelOpen = false;
+
+    // Global Undo / Redo History Stack
+    const undoStack = [];
+    const redoStack = [];
+    const MAX_HISTORY = 50;
+
+    document.addEventListener("DOMContentLoaded", function() {
+      htmlAce = ace.edit("ace-html");
+      htmlAce.setTheme("ace/theme/one_dark");
+      htmlAce.getSession().setMode("ace/mode/html");
+      htmlAce.setValue(INITIAL_HTML.trim(), -1);
+      setupAceOptions(htmlAce);
+
+      cssAce = ace.edit("ace-css");
+      cssAce.setTheme("ace/theme/one_dark");
+      cssAce.getSession().setMode("ace/mode/css");
+      cssAce.setValue(INITIAL_CSS.trim(), -1);
+      setupAceOptions(cssAce);
+
+      jsAce = ace.edit("ace-js");
+      jsAce.setTheme("ace/theme/one_dark");
+      jsAce.getSession().setMode("ace/mode/javascript");
+      jsAce.setValue(INITIAL_JS.trim(), -1);
+      setupAceOptions(jsAce);
+
+      // Push Initial Snapshot
+      saveHistoryState();
+      VI.fetchGlobalBranding();
+
+      [htmlAce, cssAce, jsAce].forEach(editor => {
+        editor.on("change", () => {
+          markAsDirty();
+          if (!isSyncingFromVI) {
+            schedulePreviewUpdate();
+          }
+        });
+
+        editor.commands.addCommand({
+          name: 'saveTemplateCmd',
+          bindKey: { win: 'Ctrl-S', mac: 'Command-S' },
+          exec: function() { saveTemplate(); }
+        });
+      });
+
+      // Global Keydown Keyboard Shortcuts (Ctrl+Z / Ctrl+Y)
+      window.addEventListener('keydown', handleGlobalShortcuts);
+
+      renderPreview();
+      setTimeout(loadSavedUserPreferences, 100);
+    });
+
+    function saveHistoryState() {
+      if (!htmlAce || !cssAce) return;
+      const snapshot = {
+        html: htmlAce.getValue(),
+        css: cssAce.getValue()
+      };
+      // Prevent pushing duplicate snapshots
+      if (undoStack.length > 0) {
+        const last = undoStack[undoStack.length - 1];
+        if (last.html === snapshot.html && last.css === snapshot.css) return;
+      }
+      undoStack.push(snapshot);
+      if (undoStack.length > MAX_HISTORY) undoStack.shift();
+      redoStack.length = 0; // Clear redo stack on new action
+    }
+
+    function undoAction() {
+      if (undoStack.length <= 1) {
+        Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Nothing to undo', showConfirmButton: false, timer: 1200 });
+        return;
+      }
+      const current = undoStack.pop();
+      redoStack.push(current);
+
+      const previous = undoStack[undoStack.length - 1];
+      applyHistorySnapshot(previous);
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Undo', showConfirmButton: false, timer: 1000 });
+    }
+
+    function redoAction() {
+      if (redoStack.length === 0) {
+        Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Nothing to redo', showConfirmButton: false, timer: 1200 });
+        return;
+      }
+      const next = redoStack.pop();
+      undoStack.push(next);
+      applyHistorySnapshot(next);
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Redo', showConfirmButton: false, timer: 1000 });
+    }
+
+    function applyHistorySnapshot(snapshot) {
+      if (!snapshot) return;
+      isSyncingFromVI = true;
+      if (htmlAce) htmlAce.setValue(snapshot.html, -1);
+      if (cssAce) cssAce.setValue(snapshot.css, -1);
+      isSyncingFromVI = false;
+      renderPreview();
+      markAsDirty();
+    }
+
+    function handleGlobalShortcuts(e) {
+      const activeTag = (document.activeElement ? document.activeElement.tagName.toLowerCase() : '');
+      const isInputFocused = activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select' || (document.activeElement && document.activeElement.isContentEditable);
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undoAction();
+      } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+        e.preventDefault();
+        redoAction();
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && !isInputFocused && VI.target) {
+        e.preventDefault();
+        VI.deleteSelected();
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // PERSISTENT USER PREFERENCES ENGINE (LOCALSTORAGE)
+    // ══════════════════════════════════════════════════════════════
+    const PREF_KEYS = {
+      TAB: 'editor_pref_tab',
+      CODE_PANEL: 'editor_pref_code_panel',
+      CLICK_TO_EDIT: 'editor_pref_click_to_edit',
+      LAYERS_PANEL: 'editor_pref_layers_panel',
+      A4_GUIDES: 'editor_pref_a4_guides',
+      DEVICE_VIEW: 'editor_pref_device_view',
+      THEME: 'editor_pref_theme'
+    };
+
+    function saveUserPreference(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (e) {}
+    }
+
+    function getUserPreference(key, defaultValue) {
+      try {
+        const item = localStorage.getItem(key);
+        return item !== null ? JSON.parse(item) : defaultValue;
+      } catch (e) {
+        return defaultValue;
+      }
+    }
+
+    function loadSavedUserPreferences() {
+      const savedTheme = getUserPreference(PREF_KEYS.THEME, 'ace/theme/one_dark');
+      const themeSelect = document.getElementById('theme-selector');
+      if (themeSelect) {
+        themeSelect.value = savedTheme;
+        changeAceTheme(savedTheme);
+      }
+
+      const savedCodePanel = getUserPreference(PREF_KEYS.CODE_PANEL, true);
+      if (!savedCodePanel && isCodePanelVisible) {
+        toggleCodePanel(true);
+      }
+
+      const savedTab = getUserPreference(PREF_KEYS.TAB, 'html');
+      const tabBtn = document.querySelector(`.tab-btn[onclick*="'${savedTab}'"]`);
+      switchEditorTab(savedTab, tabBtn || document.querySelector('.tab-btn'), true);
+
+      const savedClickToEdit = getUserPreference(PREF_KEYS.CLICK_TO_EDIT, true);
+      if (!savedClickToEdit && isInspectorActive) {
+        toggleInspectorMode(true);
+      }
+
+      const savedLayersPanel = getUserPreference(PREF_KEYS.LAYERS_PANEL, false);
+      if (savedLayersPanel && !isLayersPanelOpen) {
+        toggleLayersPanel(true);
+      }
+
+      const savedA4Guides = getUserPreference(PREF_KEYS.A4_GUIDES, true);
+      if (!savedA4Guides && isA4GuidesActive) {
+        toggleA4Guides(true);
+      }
+
+      const savedDevice = getUserPreference(PREF_KEYS.DEVICE_VIEW, '100%');
+      const devBtn = document.querySelector(`.viewport-btn[onclick*="'${savedDevice}'"]`);
+      if (devBtn) setViewport(savedDevice, devBtn, true);
+    }
+
+    function toggleCodePanel(skipSave = false) {
+      isCodePanelVisible = !isCodePanelVisible;
+      const app = document.getElementById('editor-app');
+      const btn = document.getElementById('btn-toggle-code');
+      
+      if (isCodePanelVisible) {
+        app.classList.remove('code-hidden');
+        btn.innerHTML = `<i class="fa-solid fa-code"></i> Hide Code`;
+        setTimeout(() => {
+          if (htmlAce) htmlAce.resize();
+          if (cssAce) cssAce.resize();
+          if (jsAce) jsAce.resize();
+        }, 300);
+      } else {
+        app.classList.add('code-hidden');
+        btn.innerHTML = `<i class="fa-solid fa-code"></i> Show Code`;
+      }
+      if (!skipSave) saveUserPreference(PREF_KEYS.CODE_PANEL, isCodePanelVisible);
+    }
+
+    function toggleLayersPanel(skipSave = false) {
+      isLayersPanelOpen = !isLayersPanelOpen;
+      const pnl = document.getElementById('layers-tree-panel');
+      const btn = document.getElementById('layers-toggle-btn');
+      pnl.classList.toggle('open', isLayersPanelOpen);
+      btn.classList.toggle('active', isLayersPanelOpen);
+      if (isLayersPanelOpen) {
+        buildLayersTree();
+      }
+      if (!skipSave) saveUserPreference(PREF_KEYS.LAYERS_PANEL, isLayersPanelOpen);
+    }
+
+    function buildLayersTree() {
+      const container = document.getElementById('layers-tree-body');
+      if (!container) return;
+      const iframe = document.getElementById('preview-iframe');
+      if (!iframe) return;
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      if (!doc) return;
+
+      container.innerHTML = '';
+
+      const getFriendlyLayerName = (el) => {
+        const tag = el.tagName.toLowerCase();
+        const text = (el.innerText || '').trim();
+
+        if (tag === 'img') {
+          const alt = el.getAttribute('alt') || el.getAttribute('src') || 'Image';
+          return `🖼️ Image (${alt.split('/').pop().substring(0, 12)})`;
+        }
+        if (tag === 'table') return '📊 Table Block';
+        if (tag === 'tbody') return '📋 Table Body';
+        if (tag === 'tr') return text ? `↔️ Row: "${text.substring(0, 18)}..."` : '↔️ Table Row';
+        if (tag === 'td' || tag === 'th') return text ? `⏹️ Cell: "${text.substring(0, 18)}..."` : '⏹️ Table Cell';
+        if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') return `🏷️ Heading: "${text.substring(0, 18)}..."`;
+        if (tag === 'a' || tag === 'button') return `🔘 Button: "${text.substring(0, 15)}"`;
+        if (tag === 'p' || tag === 'span') return `📄 Text: "${text.substring(0, 18)}..."`;
+        if (tag === 'pagebreak') return '✂️ Page Break';
+
+        if (text && el.children.length === 0) return `📝 Text: "${text.substring(0, 18)}..."`;
+        const idOrClass = el.id ? '#' + el.id : (el.className ? '.' + el.className.toString().split(' ')[0] : '');
+        return `📦 Container ${idOrClass || tag}`;
+      };
+
+      const renderNode = (el, indent, parentContainer) => {
+        if (!el || el.nodeType !== 1) return null;
+        const tag = el.tagName.toLowerCase();
+        if (tag === 'script' || tag === 'style' || el.classList.contains('vi-floating-bar')) return null;
+
+        const friendlyTitle = getFriendlyLayerName(el);
+        const hasChildren = el.children.length > 0;
+
+        const item = document.createElement('div');
+        item.className = 'layer-item';
+        if (VI.target === el) item.classList.add('active');
+        item.style.paddingLeft = (indent * 12 + 6) + 'px';
+
+        item.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; width: 100%;">
+            ${hasChildren ? '<i class="fa-solid fa-caret-down toggle-caret" style="font-size: 10px; color: #64748b; width: 10px; cursor: pointer;"></i>' : '<span style="width: 10px;"></span>'}
+            <span style="color: ${VI.target === el ? '#fff' : '#38bdf8'}; font-weight: 600; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${friendlyTitle}</span>
+          </div>
+        `;
+
+        item.onmouseover = (ev) => {
+          ev.stopPropagation();
+          if (isInspectorActive) el.setAttribute('data-vi-hover', 'true');
+        };
+        item.onmouseout = (ev) => {
+          ev.stopPropagation();
+          el.removeAttribute('data-vi-hover');
+        };
+        item.onclick = (e) => {
+          e.stopPropagation();
+          doc.querySelectorAll('[data-vi-selected]').forEach(sEl => sEl.removeAttribute('data-vi-selected'));
+          el.setAttribute('data-vi-selected', 'true');
+          VI.selectElement(el);
+          buildLayersTree();
+        };
+
+        parentContainer.appendChild(item);
+
+        if (VI.target === el && item.scrollIntoView) {
+          setTimeout(() => item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+        }
+
+        const childrenContainer = document.createElement('div');
+        childrenContainer.className = 'layer-children';
+        parentContainer.appendChild(childrenContainer);
+
+        const caretBtn = item.querySelector('.toggle-caret');
+        if (caretBtn) {
+          caretBtn.onclick = (cEv) => {
+            cEv.stopPropagation();
+            const isCollapsed = childrenContainer.style.display === 'none';
+            childrenContainer.style.display = isCollapsed ? 'block' : 'none';
+            caretBtn.className = isCollapsed ? 'fa-solid fa-caret-down toggle-caret' : 'fa-solid fa-caret-right toggle-caret';
+          };
+        }
+
+        Array.from(el.children).forEach(child => {
+          renderNode(child, indent + 1, childrenContainer);
+        });
+
+        return item;
+      };
+
+      Array.from(doc.body.children).forEach(child => renderNode(child, 0, container));
+    }
+
+    function collapseAllLayers() {
+      document.querySelectorAll('#layers-tree-body .layer-children').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('#layers-tree-body .toggle-caret').forEach(el => el.className = 'fa-solid fa-caret-right toggle-caret');
+    }
+
+    function expandAllLayers() {
+      document.querySelectorAll('#layers-tree-body .layer-children').forEach(el => el.style.display = 'block');
+      document.querySelectorAll('#layers-tree-body .toggle-caret').forEach(el => el.className = 'fa-solid fa-caret-down toggle-caret');
+    }
+
+    function filterLayersTree(query) {
+      const q = query.toLowerCase().trim();
+      document.querySelectorAll('#layers-tree-body .layer-item').forEach(item => {
+        if (!q || item.textContent.toLowerCase().includes(q)) {
+          item.style.display = 'flex';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    function setupAceOptions(editor) {
+      editor.setOptions({
+        useSoftTabs: true,
+        tabSize: 2,
+        wrap: true,
+        showPrintMargin: false,
+        enableLiveAutocompletion: true
+      });
+    }
+
+    function markAsDirty() {
+      if (!isDirty) {
+        isDirty = true;
+        document.getElementById('unsaved-badge').classList.add('active');
+      }
+    }
+
+    function markAsClean() {
+      isDirty = false;
+      document.getElementById('unsaved-badge').classList.remove('active');
+    }
+
+    window.addEventListener('beforeunload', function(e) {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+
+    function switchEditorTab(tab, btnEl, skipSave = false) {
+      const container = document.getElementById('editors-container');
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+
+      if (tab === 'split') {
+        container.classList.add('stacked-mode');
+        document.querySelectorAll('.stacked-label').forEach(el => el.style.display = 'block');
+        document.querySelectorAll('.editor-pane').forEach(el => el.classList.remove('active'));
+      } else {
+        container.classList.remove('stacked-mode');
+        document.querySelectorAll('.stacked-label').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.editor-pane').forEach(el => el.classList.remove('active'));
+        const activePane = document.getElementById('pane-' + tab);
+        if (activePane) activePane.classList.add('active');
+      }
+
+      setTimeout(() => {
+        if (htmlAce) htmlAce.resize();
+        if (cssAce) cssAce.resize();
+        if (jsAce) jsAce.resize();
+      }, 50);
+
+      if (!skipSave) saveUserPreference(PREF_KEYS.TAB, tab);
+    }
+
+    function switchViSubtab(paneId, btn) {
+      document.querySelectorAll('.vi-subtab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.vi-pane').forEach(p => p.classList.remove('active'));
+      const pane = document.getElementById('vi-pane-' + paneId);
+      if (pane) pane.classList.add('active');
+    }
+
+    function changeAceTheme(themePath, skipSave = false) {
+      [htmlAce, cssAce, jsAce].forEach(ed => { if (ed) ed.setTheme(themePath); });
+      if (!skipSave) saveUserPreference(PREF_KEYS.THEME, themePath);
+    }
+
+    function formatAllCode() {
+      try {
+        saveHistoryState();
+        if (htmlAce && window.html_beautify) {
+          htmlAce.setValue(window.html_beautify(htmlAce.getValue().trim(), { indent_size: 2 }), -1);
+        }
+        if (cssAce && window.css_beautify) {
+          cssAce.setValue(window.css_beautify(cssAce.getValue().trim(), { indent_size: 2 }), -1);
+        }
+        if (jsAce && window.js_beautify) {
+          jsAce.setValue(window.js_beautify(jsAce.getValue().trim(), { indent_size: 2 }), -1);
+        }
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Code formatted!', showConfirmButton: false, timer: 1500 });
+      } catch (err) {
+        console.error("Format error:", err);
+      }
+    }
+
+    function setViewport(width, btn, skipSave = false) {
+      document.querySelectorAll('.viewport-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      document.getElementById('preview-iframe').style.width = width;
+      if (!skipSave) saveUserPreference(PREF_KEYS.DEVICE_VIEW, width);
+    }
+
+    function toggleInspectorMode(skipSave = false) {
+      isInspectorActive = !isInspectorActive;
+      const btn = document.getElementById('inspector-mode-btn');
+      btn.classList.toggle('active', isInspectorActive);
+      btn.innerHTML = isInspectorActive ? `<i class="fa-solid fa-arrow-pointer"></i> Click-to-Edit: ON` : `<i class="fa-solid fa-arrow-pointer"></i> Click-to-Edit: OFF`;
+      if (!isInspectorActive) closeVisualInspector();
+      if (!skipSave) saveUserPreference(PREF_KEYS.CLICK_TO_EDIT, isInspectorActive);
+    }
+
+    function schedulePreviewUpdate() {
+      const autoRefresh = document.getElementById('auto-refresh-toggle').checked;
+      if (!autoRefresh) return;
+      clearTimeout(previewDebounceTimer);
+      previewDebounceTimer = setTimeout(renderPreview, 300);
+    }
+
+    let isA4GuidesActive = true;
+
+    function toggleA4Guides(skipSave = false) {
+      isA4GuidesActive = !isA4GuidesActive;
+      const btn = document.getElementById('btn-a4-guides');
+      if (btn) {
+        btn.classList.toggle('active', isA4GuidesActive);
+        btn.innerHTML = `<i class="fa-solid fa-scissors"></i> A4 Guides: ${isA4GuidesActive ? 'ON' : 'OFF'}`;
+      }
+      renderPreview();
+      if (!skipSave) saveUserPreference(PREF_KEYS.A4_GUIDES, isA4GuidesActive);
+    }
+
+    function renderA4PageGuides(doc) {
+      if (!doc) return;
+      doc.querySelectorAll('.a4-page-guide-line').forEach(el => el.remove());
+      if (!isA4GuidesActive) return;
+
+      const a4Height = 1123;
+      const totalHeight = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
+
+      if (totalHeight > a4Height) {
+        const pageCount = Math.floor(totalHeight / a4Height);
+        for (let i = 1; i <= pageCount; i++) {
+          const guide = doc.createElement('div');
+          guide.className = 'a4-page-guide-line';
+          guide.style.top = (i * a4Height) + 'px';
+          guide.innerHTML = `<span>✂️ A4 PAGE ${i} END (${i * a4Height}px) / PAGE ${i + 1} START ✂️</span>`;
+          doc.body.appendChild(guide);
+        }
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // PREVIEW RENDER & DRAG-AND-DROP REORDERING ENGINE
+    // ══════════════════════════════════════════════════════════════
+    function renderPreview() {
+      const iframe = document.getElementById('preview-iframe');
+      if (!iframe || !htmlAce) return;
+
+      const htmlContent = htmlAce.getValue().trim();
+      const cssContent = cssAce ? cssAce.getValue() : "";
+      const jsContent = jsAce ? jsAce.getValue() : "";
+
+      const docSrc = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    ${cssContent}
+    [data-vi-hover] { outline: 2px dashed #38bdf8 !important; cursor: pointer !important; }
+    [data-vi-selected] { outline: 3px solid #2563eb !important; outline-offset: 1px !important; }
+    [data-vi-dragover] { border-top: 4px solid #2563eb !important; }
+    
+    /* A4 Page Break Visualizer Styles */
+    pagebreak, .pagebreak, div[style*="page-break"] {
+      display: block !important;
+      page-break-before: always !important;
+      break-before: page !important;
+      height: 24px !important;
+      margin: 15px 0 !important;
+      border-top: 2px dashed #ef4444 !important;
+      position: relative !important;
+      text-align: center !important;
+      background: rgba(239, 68, 68, 0.05) !important;
+    }
+    pagebreak::after, .pagebreak::after {
+      content: '✂️ A4 PAGE BREAK (PRINT SPLIT HERE) ✂️';
+      display: inline-block !important;
+      background: #ef4444 !important;
+      color: #ffffff !important;
+      font-size: 10px !important;
+      font-weight: 700 !important;
+      padding: 2px 12px !important;
+      border-radius: 12px !important;
+      position: relative !important;
+      top: -12px !important;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+    }
+
+    /* A4 Automatic Page Guideline Markers */
+    .a4-page-guide-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      border-top: 2px dashed #f59e0b;
+      z-index: 99999;
+      pointer-events: none;
+      text-align: right;
+      padding-right: 15px;
+    }
+    .a4-page-guide-line span {
+      background: #f59e0b;
+      color: #000000;
+      font-weight: 800;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 0 0 4px 4px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    /* In-Canvas Floating Toolbar */
+    .vi-floating-bar {
+      position: absolute;
+      background: #1e293b;
+      color: #fff;
+      border: 1px solid #38bdf8;
+      border-radius: 6px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 6px;
+      z-index: 999999;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      pointer-events: auto;
+    }
+    .vi-floating-bar .vi-fb-tag {
+      background: rgba(56,189,248,0.2);
+      color: #38bdf8;
+      font-weight: 700;
+      font-family: monospace;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+    }
+    .vi-floating-bar button {
+      background: #0f172a;
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #e2e8f0;
+      padding: 2px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s ease;
+    }
+    .vi-floating-bar button:hover {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #2563eb;
+    }
+    .vi-floating-bar button.danger:hover {
+      background: #dc2626;
+      color: #ffffff;
+      border-color: #dc2626;
+    }
+  </style>
+  <script data-preview-script="true">
+    try { ${jsContent} } catch(e) {}
+  <\/script>
+</head>
+<body>${htmlContent}</body>
+</html>`;
+
+      iframe.srcdoc = docSrc;
+
+      iframe.onload = function() {
+        attachIframeInspectorEvents(iframe);
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        if (doc) renderA4PageGuides(doc);
+        if (isLayersPanelOpen) buildLayersTree();
+      };
+    }
+
+    function attachIframeInspectorEvents(iframe) {
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        if (!doc) return;
+
+        doc.addEventListener('keydown', handleGlobalShortcuts);
+
+        doc.addEventListener('mouseover', function(e) {
+          if (!isInspectorActive) return;
+          if (e.target === doc.body || e.target === doc.documentElement || e.target.closest('.vi-floating-bar')) return;
+          e.target.setAttribute('data-vi-hover', 'true');
+        });
+
+        doc.addEventListener('mouseout', function(e) {
+          if (e.target.hasAttribute('data-vi-hover')) {
+            e.target.removeAttribute('data-vi-hover');
+          }
+        });
+
+        doc.addEventListener('click', function(e) {
+          if (!isInspectorActive) return;
+          if (e.target.closest('.vi-floating-bar')) return;
+          e.preventDefault();
+          e.stopPropagation();
+
+          doc.querySelectorAll('[data-vi-selected]').forEach(el => el.removeAttribute('data-vi-selected'));
+          e.target.setAttribute('data-vi-selected', 'true');
+
+          VI.selectElement(e.target);
+          if (isLayersPanelOpen) buildLayersTree();
+        });
+
+        // Double-click to inline edit text directly
+        doc.addEventListener('dblclick', function(e) {
+          if (!isInspectorActive || e.target.closest('.vi-floating-bar')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          saveHistoryState();
+          e.target.setAttribute('contenteditable', 'true');
+          e.target.focus();
+
+          const onBlur = () => {
+            e.target.removeAttribute('contenteditable');
+            VI.syncIframeToCode();
+            e.target.removeEventListener('blur', onBlur);
+          };
+          e.target.addEventListener('blur', onBlur);
+        });
+
+        // Drag & Drop Reordering
+        doc.addEventListener('dragstart', function(e) {
+          if (!isInspectorActive || e.target.closest('.vi-floating-bar')) return;
+          draggedElement = e.target;
+          saveHistoryState();
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', '');
+        });
+
+        doc.addEventListener('dragover', function(e) {
+          if (!isInspectorActive || !draggedElement) return;
+          if (e.target === doc.body || e.target === doc.documentElement || e.target === draggedElement || e.target.closest('.vi-floating-bar')) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          e.target.setAttribute('data-vi-dragover', 'true');
+        });
+
+        doc.addEventListener('dragleave', function(e) {
+          if (e.target.hasAttribute('data-vi-dragover')) {
+            e.target.removeAttribute('data-vi-dragover');
+          }
+        });
+
+        doc.addEventListener('drop', function(e) {
+          if (!isInspectorActive || !draggedElement) return;
+          e.preventDefault();
+          doc.querySelectorAll('[data-vi-dragover]').forEach(el => el.removeAttribute('data-vi-dragover'));
+
+          const dropTarget = e.target;
+          if (dropTarget && dropTarget !== draggedElement && dropTarget.parentNode) {
+            dropTarget.parentNode.insertBefore(draggedElement, dropTarget);
+            VI.syncIframeToCode();
+            VI.selectElement(draggedElement);
+            if (isLayersPanelOpen) buildLayersTree();
+          }
+          draggedElement = null;
+        });
+
+        doc.addEventListener('dragend', function(e) {
+          doc.querySelectorAll('[data-vi-dragover]').forEach(el => el.removeAttribute('data-vi-dragover'));
+          draggedElement = null;
+        });
+
+      } catch(err) {
+        console.error("Iframe event error:", err);
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ADVANCED VISUAL INSPECTOR (VI) CONTROLLER
+    // ══════════════════════════════════════════════════════════════
+    const VI = {
+      target: null,
+
+      selectElement(el) {
+        this.target = el;
+        const tag = el.tagName.toLowerCase();
+        const cls = el.className ? '.' + el.className.toString().replace(/\s+/g, '.').replace(/\bdata-vi-[a-z]+\b/g, '').replace(/\.\./g, '.') : '';
+
+        // Auto Scroll Preview Iframe to the selected element smoothly
+        if (el && el.scrollIntoView) {
+          try {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+          } catch(e) {
+            try { el.scrollIntoView(true); } catch(err) {}
+          }
+        }
+
+        // Make element draggable in iframe
+        el.setAttribute('draggable', 'true');
+
+        document.getElementById('vi-tag-badge').textContent = tag;
+        document.getElementById('vi-class-badge').textContent = cls || '';
+
+        const textVal = el.children.length === 0 ? el.innerText : '';
+        document.getElementById('vi-text-content').value = textVal;
+
+        const computed = window.getComputedStyle ? el.ownerDocument.defaultView.getComputedStyle(el) : el.style;
+
+        // Render DOM Breadcrumbs Hierarchy Bar
+        this.updateBreadcrumbs(el);
+
+        // Style
+        VI._setVal('vi-font-family', el.style.fontFamily || computed.fontFamily);
+        const fs = parseFloat(computed.fontSize) || 14;
+        VI._setVal('vi-font-size-range', fs);
+        VI._setVal('vi-font-size-num', fs);
+        VI._setVal('vi-font-weight', computed.fontWeight || '400');
+
+        const colorHex = VI._rgbToHex(computed.color || '#000000');
+        VI._setVal('vi-color-picker', colorHex);
+        VI._setVal('vi-color-hex', computed.color || colorHex);
+
+        VI._setVal('vi-pt', el.style.paddingTop || computed.paddingTop);
+        VI._setVal('vi-pr', el.style.paddingRight || computed.paddingRight);
+        VI._setVal('vi-pb', el.style.paddingBottom || computed.paddingBottom);
+        VI._setVal('vi-pl', el.style.paddingLeft || computed.paddingLeft);
+
+        VI._setVal('vi-mt', el.style.marginTop || computed.marginTop);
+        VI._setVal('vi-mr', el.style.marginRight || computed.marginRight);
+        VI._setVal('vi-mb', el.style.marginBottom || computed.marginBottom);
+        VI._setVal('vi-ml', el.style.marginLeft || computed.marginLeft);
+
+        const bgHex = VI._rgbToHex(computed.backgroundColor || '#ffffff');
+        VI._setVal('vi-bg-picker', bgHex);
+        VI._setVal('vi-bg-hex', el.style.backgroundColor || computed.backgroundColor);
+        VI._setVal('vi-bg-picker-2', bgHex);
+        VI._setVal('vi-bg-hex-2', el.style.backgroundColor || computed.backgroundColor);
+
+        // Background Image & Positioning
+        let bgImgRaw = el.style.backgroundImage || computed.backgroundImage || '';
+        if (bgImgRaw === 'none') bgImgRaw = '';
+        const cleanBgUrl = bgImgRaw.replace(/^url\(["']?/, '').replace(/["']?\)$/, '');
+        VI._setVal('vi-bg-img-url', cleanBgUrl);
+        VI._setVal('vi-bg-img-url-media', cleanBgUrl);
+
+        const bgSizeVal = el.style.backgroundSize || computed.backgroundSize || 'cover';
+        const stdSizes = ['cover', 'contain', '100% 100%', 'auto'];
+        const customSizeInput = document.getElementById('vi-bg-size-custom');
+        if (stdSizes.includes(bgSizeVal)) {
+          VI._setVal('vi-bg-size', bgSizeVal);
+          VI._setVal('vi-bg-size-media', bgSizeVal);
+          if (customSizeInput) customSizeInput.style.display = 'none';
+        } else {
+          VI._setVal('vi-bg-size', 'custom');
+          VI._setVal('vi-bg-size-media', 'custom');
+          if (customSizeInput) {
+            customSizeInput.style.display = 'block';
+            customSizeInput.value = bgSizeVal;
+          }
+        }
+
+        const bgPosVal = el.style.backgroundPosition || computed.backgroundPosition || 'center center';
+        const stdPos = ['center center', 'top left', 'top center', 'top right', 'center left', 'center right', 'bottom center'];
+        const customPosInput = document.getElementById('vi-bg-pos-custom');
+        if (stdPos.includes(bgPosVal)) {
+          VI._setVal('vi-bg-pos', bgPosVal);
+          if (customPosInput) customPosInput.style.display = 'none';
+        } else {
+          VI._setVal('vi-bg-pos', 'custom');
+          if (customPosInput) {
+            customPosInput.style.display = 'block';
+            customPosInput.value = bgPosVal;
+          }
+        }
+
+        VI._setVal('vi-bg-repeat', el.style.backgroundRepeat || computed.backgroundRepeat || 'no-repeat');
+        VI._setVal('vi-bg-attach', el.style.backgroundAttachment || computed.backgroundAttachment || 'scroll');
+
+        const bgPreviewCard = document.getElementById('vi-bg-img-preview');
+        if (bgPreviewCard) {
+          if (cleanBgUrl) {
+            bgPreviewCard.style.display = 'block';
+            bgPreviewCard.src = cleanBgUrl;
+          } else {
+            bgPreviewCard.style.display = 'none';
+          }
+        }
+
+        // Border & Radius
+        const br = parseFloat(computed.borderRadius) || 0;
+        VI._setVal('vi-radius-range', br);
+        VI._setVal('vi-radius-num', br);
+
+        VI._setVal('vi-rtl', el.style.borderTopLeftRadius || computed.borderTopLeftRadius);
+        VI._setVal('vi-rtr', el.style.borderTopRightRadius || computed.borderTopRightRadius);
+        VI._setVal('vi-rbl', el.style.borderBottomLeftRadius || computed.borderBottomLeftRadius);
+        VI._setVal('vi-rbr', el.style.borderBottomRightRadius || computed.borderBottomRightRadius);
+
+        VI._setVal('vi-border-style', computed.borderStyle || 'none');
+        const bw = parseFloat(computed.borderWidth) || 0;
+        VI._setVal('vi-bw-range', bw);
+        VI._setVal('vi-bw-num', bw);
+
+        const borderHex = VI._rgbToHex(computed.borderColor || '#000000');
+        VI._setVal('vi-border-picker', borderHex);
+        VI._setVal('vi-border-hex', el.style.borderColor || borderHex);
+        VI._setVal('vi-outline', el.style.outline || computed.outline);
+
+        // Effects
+        VI._setVal('vi-opacity', computed.opacity || '1');
+
+        // Layout
+        VI._setVal('vi-display', computed.display || 'block');
+        VI._setVal('vi-justify', computed.justifyContent || '');
+        VI._setVal('vi-width', el.style.width || '');
+        VI._setVal('vi-height', el.style.height || '');
+
+        // Media & Attrs
+        VI._setVal('vi-img-src', el.getAttribute('src') || '');
+        VI._setVal('vi-link-href', el.getAttribute('href') || '');
+        VI._setVal('vi-el-id', el.getAttribute('id') || '');
+        VI._setVal('vi-el-class', el.className.toString().replace(/\bdata-vi-[a-z]+\b/g, '').replace(/draggable/g, '').trim());
+
+        this.renderFloatingToolbar(el);
+        this.updateAssociatedCodeBox(el);
+
+        document.getElementById('visual-inspector-panel').classList.add('open');
+      },
+
+      updateBreadcrumbs(el) {
+        const breadContainer = document.getElementById('preview-breadcrumbs');
+        if (!breadContainer) return;
+
+        const chain = [];
+        let curr = el;
+        while (curr && curr.tagName && curr.tagName.toLowerCase() !== 'html') {
+          chain.unshift(curr);
+          curr = curr.parentElement;
+        }
+
+        breadContainer.innerHTML = '<span>Hierarchy:</span> ' + chain.map((item, idx) => {
+          const tName = item.tagName.toLowerCase();
+          const idStr = item.id ? '#' + item.id : '';
+          return `<span class="breadcrumb-item" data-bc-index="${idx}">${tName}${idStr}</span>`;
+        }).join(' <i class="fa-solid fa-chevron-right" style="font-size: 8px; color: rgba(255,255,255,0.2);"></i> ');
+
+        breadContainer.querySelectorAll('.breadcrumb-item').forEach((bEl, i) => {
+          bEl.onclick = () => {
+            const targetAncestor = chain[i];
+            if (targetAncestor) VI.selectElement(targetAncestor);
+          };
+        });
+      },
+
+      renderFloatingToolbar(el) {
+        const doc = el.ownerDocument;
+        if (!doc) return;
+
+        doc.querySelectorAll('.vi-floating-bar').forEach(b => b.remove());
+
+        const bar = doc.createElement('div');
+        bar.className = 'vi-floating-bar';
+
+        const tag = el.tagName.toLowerCase();
+        bar.innerHTML = `
+          <span class="vi-fb-tag">${tag}</span>
+          <button class="btn-vi-up" title="Move Up"><i class="fa-solid fa-arrow-up"></i></button>
+          <button class="btn-vi-down" title="Move Down"><i class="fa-solid fa-arrow-down"></i></button>
+          <button class="btn-vi-parent" title="Select Parent Container"><i class="fa-solid fa-turn-up"></i> Parent</button>
+          <button class="btn-vi-add" style="background: #2563eb; color: #ffffff; border-color: #2563eb;" title="Insert Custom Element or HTML Snippet Before / After / Inside"><i class="fa-solid fa-plus"></i> Add</button>
+          <button class="btn-vi-clone" title="Clone / Duplicate"><i class="fa-solid fa-copy"></i></button>
+          <button class="btn-vi-del danger" title="Delete Element"><i class="fa-solid fa-trash"></i></button>
+        `;
+
+        bar.querySelector('.btn-vi-up').onclick = (e) => { e.preventDefault(); e.stopPropagation(); VI.moveSelectedUp(); };
+        bar.querySelector('.btn-vi-down').onclick = (e) => { e.preventDefault(); e.stopPropagation(); VI.moveSelectedDown(); };
+        bar.querySelector('.btn-vi-parent').onclick = (e) => {
+          e.preventDefault(); e.stopPropagation();
+          if (VI.target && VI.target.parentNode && VI.target.parentNode !== doc.body) {
+            VI.selectElement(VI.target.parentNode);
+          }
+        };
+        bar.querySelector('.btn-vi-add').onclick = (e) => { e.preventDefault(); e.stopPropagation(); VI.openAddElementModal(); };
+        bar.querySelector('.btn-vi-clone').onclick = (e) => { e.preventDefault(); e.stopPropagation(); VI.duplicateSelected(); };
+        bar.querySelector('.btn-vi-del').onclick = (e) => { e.preventDefault(); e.stopPropagation(); VI.deleteSelected(); };
+
+        const rect = el.getBoundingClientRect();
+        const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
+        const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
+
+        bar.style.top = Math.max(0, rect.top + scrollTop - 34) + 'px';
+        bar.style.left = Math.max(0, rect.left + scrollLeft) + 'px';
+
+        doc.body.appendChild(bar);
+      },
+
+      insertSelectedBlock() {
+        const type = document.getElementById('vi-insert-block-select').value;
+        this.insertBlock(type);
+      },
+
+      insertBlock(type) {
+        saveHistoryState();
+        const iframe = document.getElementById('preview-iframe');
+        if (!iframe) return;
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        if (!doc) return;
+
+        let newEl;
+        switch(type) {
+          case 'paragraph':
+            newEl = doc.createElement('p');
+            newEl.innerText = 'New paragraph block...';
+            newEl.style.margin = '10px 0';
+            break;
+          case 'heading':
+            newEl = doc.createElement('h2');
+            newEl.innerText = 'New Section Title';
+            newEl.style.fontSize = '20px';
+            newEl.style.margin = '12px 0';
+            break;
+          case 'button':
+            newEl = doc.createElement('a');
+            newEl.innerText = 'Click Here';
+            newEl.href = '#';
+            newEl.style.display = 'inline-block';
+            newEl.style.padding = '8px 16px';
+            newEl.style.background = '#2563eb';
+            newEl.style.color = '#ffffff';
+            newEl.style.borderRadius = '4px';
+            newEl.style.textDecoration = 'none';
+            break;
+          case 'image':
+            newEl = doc.createElement('img');
+            newEl.src = 'https://via.placeholder.com/200x80?text=Sample+Image';
+            newEl.style.maxWidth = '100%';
+            break;
+          case 'divider':
+            newEl = doc.createElement('hr');
+            newEl.style.border = '0';
+            newEl.style.borderTop = '1px solid #cbd5e1';
+            newEl.style.margin = '16px 0';
+            break;
+          case 'box':
+            newEl = doc.createElement('div');
+            newEl.innerText = 'New container box...';
+            newEl.style.padding = '16px';
+            newEl.style.border = '1px solid #e2e8f0';
+            newEl.style.borderRadius = '6px';
+            newEl.style.margin = '10px 0';
+            break;
+          case 'tablerow':
+            newEl = doc.createElement('tr');
+            newEl.innerHTML = `<td style="padding: 8px; border: 1px solid #cbd5e1;">New Label</td><td style="padding: 8px; border: 1px solid #cbd5e1;">[value]</td>`;
+            break;
+          case 'pagebreak':
+            newEl = doc.createElement('pagebreak');
+            break;
+        }
+
+        if (!newEl) return;
+
+        if (this.target && this.target.parentNode) {
+          this.target.parentNode.insertBefore(newEl, this.target.nextSibling);
+        } else {
+          doc.body.appendChild(newEl);
+        }
+
+        this.syncIframeToCode();
+        this.selectElement(newEl);
+        if (isLayersPanelOpen) buildLayersTree();
+      },
+
+      openAddElementModal(initialPos = 'after') {
+        if (!this.target) return;
+        const tag = this.target.tagName.toLowerCase();
+
+        if (!window.Swal) return;
+
+        Swal.fire({
+          title: `<i class="fa-solid fa-plus-circle" style="color: #38bdf8;"></i> Insert Element or HTML`,
+          html: `
+            <div style="text-align: left; font-size: 12px; color: #cbd5e1; display: flex; flex-direction: column; gap: 12px;">
+              <div>
+                <label style="font-weight: 700; display: block; margin-bottom: 4px; color: #fff;">1. Select Insert Position (Relative to &lt;${tag}&gt;):</label>
+                <select id="swal-insert-pos" class="vi-select" style="width: 100%; padding: 6px; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 4px;">
+                  <option value="after" ${initialPos === 'after' ? 'selected' : ''}>⬇️ Insert AFTER Selected Element</option>
+                  <option value="before" ${initialPos === 'before' ? 'selected' : ''}>⬆️ Insert BEFORE Selected Element</option>
+                  <option value="inside" ${initialPos === 'inside' ? 'selected' : ''}>📥 Insert INSIDE Selected Element (Child)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="font-weight: 700; display: block; margin-bottom: 4px; color: #fff;">2. Choose Preset or Custom HTML Snippet:</label>
+                <select id="swal-block-preset" class="vi-select" style="width: 100%; padding: 6px; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 4px;" onchange="VI._onSwalPresetChange(this.value)">
+                  <option value="custom">✨ Custom HTML Snippet (Paste Below)</option>
+                  <option value="paragraph">📝 Paragraph Text</option>
+                  <option value="heading">🏷️ Heading Title</option>
+                  <option value="button">🔘 Action Button</option>
+                  <option value="image">🖼️ Image</option>
+                  <option value="divider">➖ Divider Line</option>
+                  <option value="box">📦 Container Box</option>
+                  <option value="tablerow">📊 Table Row</option>
+                  <option value="pagebreak">✂️ A4 Page Break</option>
+                </select>
+              </div>
+
+              <div id="swal-custom-html-group">
+                <label style="font-weight: 700; display: block; margin-bottom: 4px; color: #fff;">3. Paste Custom HTML Snippet (or Edit Content):</label>
+                <textarea id="swal-custom-html" style="width: 100%; box-sizing: border-box; height: 90px; background: #0f172a; border: 1px solid #334155; color: #38bdf8; font-family: monospace; font-size: 11px; padding: 8px; border-radius: 4px;" placeholder="Paste HTML code here e.g. <div class='badge'>VIP Item</div>..."></textarea>
+              </div>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: '<i class="fa-solid fa-plus"></i> Insert Element',
+          cancelButtonText: 'Cancel',
+          confirmButtonColor: '#2563eb',
+          background: '#1e293b',
+          color: '#ffffff',
+          preConfirm: () => {
+            const pos = document.getElementById('swal-insert-pos').value;
+            const htmlText = document.getElementById('swal-custom-html').value.trim();
+            if (!htmlText) {
+              Swal.showValidationMessage('Please enter or select HTML content to insert');
+              return false;
+            }
+            return { pos, htmlText };
+          }
+        }).then((result) => {
+          if (result.isConfirmed && result.value) {
+            VI.insertHTMLAtPosition(result.value.htmlText, result.value.pos);
+          }
+        });
+      },
+
+      _onSwalPresetChange(preset) {
+        const textarea = document.getElementById('swal-custom-html');
+        if (!textarea) return;
+        switch(preset) {
+          case 'paragraph': textarea.value = '<p style="margin: 10px 0;">New paragraph text content...</p>'; break;
+          case 'heading': textarea.value = '<h2 style="font-size: 20px; margin: 12px 0;">New Section Title</h2>'; break;
+          case 'button': textarea.value = '<a href="#" style="display: inline-block; padding: 8px 16px; background: #2563eb; color: #fff; border-radius: 4px; text-decoration: none;">Click Here</a>'; break;
+          case 'image': textarea.value = '<img src="https://via.placeholder.com/200x80?text=Sample+Image" style="max-width: 100%;" />'; break;
+          case 'divider': textarea.value = '<hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 16px 0;" />'; break;
+          case 'box': textarea.value = '<div style="padding: 16px; border: 1px solid #e2e8f0; border-radius: 6px; margin: 10px 0;">New container box...</div>'; break;
+          case 'tablerow': textarea.value = '<tr><td style="padding: 8px; border: 1px solid #cbd5e1;">New Label</td><td style="padding: 8px; border: 1px solid #cbd5e1;">[value]</td></tr>'; break;
+          case 'pagebreak': textarea.value = '<pagebreak></pagebreak>'; break;
+          default: textarea.value = ''; break;
+        }
+      },
+
+      insertHTMLAtPosition(htmlSnippet, position = 'after') {
+        if (!this.target) return;
+        saveHistoryState();
+        const doc = this.target.ownerDocument;
+        if (!doc) return;
+
+        const tempDiv = doc.createElement('div');
+        tempDiv.innerHTML = htmlSnippet;
+        const nodes = Array.from(tempDiv.childNodes).filter(node => node.nodeType === 1 || (node.nodeType === 3 && node.textContent.trim()));
+
+        if (nodes.length === 0) return;
+
+        let lastInserted = null;
+        nodes.forEach(node => {
+          if (position === 'before') {
+            this.target.parentNode.insertBefore(node, this.target);
+            lastInserted = node;
+          } else if (position === 'inside') {
+            this.target.appendChild(node);
+            lastInserted = node;
+          } else { // 'after'
+            if (lastInserted) {
+              lastInserted.parentNode.insertBefore(node, lastInserted.nextSibling);
+            } else {
+              this.target.parentNode.insertBefore(node, this.target.nextSibling);
+            }
+            lastInserted = node;
+          }
+        });
+
+        this.syncIframeToCode();
+        if (lastInserted && lastInserted.nodeType === 1) {
+          this.selectElement(lastInserted);
+        }
+        if (isLayersPanelOpen) buildLayersTree();
+        if (window.Swal) {
+          Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Element inserted successfully', showConfirmButton: false, timer: 1500 });
+        }
+      },
+
+      insertVariable(varName) {
+        saveHistoryState();
+        const textInput = document.getElementById('vi-text-content');
+        if (textInput) {
+          textInput.value += ' ' + varName;
+          this.applyText(textInput.value);
+        }
+      },
+
+      selectParent() {
+        if (!this.target) return;
+        const doc = this.target.ownerDocument;
+        if (this.target.parentNode && this.target.parentNode !== doc.body) {
+          this.selectElement(this.target.parentNode);
+        }
+      },
+
+      moveSelectedUp() {
+        if (!this.target) return;
+        saveHistoryState();
+        let elToMove = this.target;
+        if (!elToMove.previousElementSibling && elToMove.parentNode && elToMove.parentNode !== elToMove.ownerDocument.body) {
+          elToMove = elToMove.parentNode;
+        }
+        const prev = elToMove.previousElementSibling;
+        if (prev) {
+          elToMove.parentNode.insertBefore(elToMove, prev);
+          this.syncIframeToCode();
+          this.selectElement(this.target);
+          if (isLayersPanelOpen) buildLayersTree();
+        }
+      },
+
+      moveSelectedDown() {
+        if (!this.target) return;
+        saveHistoryState();
+        let elToMove = this.target;
+        if (!elToMove.nextElementSibling && elToMove.parentNode && elToMove.parentNode !== elToMove.ownerDocument.body) {
+          elToMove = elToMove.parentNode;
+        }
+        const next = elToMove.nextElementSibling;
+        if (next) {
+          elToMove.parentNode.insertBefore(next, elToMove);
+          this.syncIframeToCode();
+          this.selectElement(this.target);
+          if (isLayersPanelOpen) buildLayersTree();
+        }
+      },
+
+      applyStyle(prop, val) {
+        if (!this.target) return;
+        saveHistoryState();
+        if (val === null || val === undefined || val === '') {
+          this.target.style.removeProperty(prop);
+        } else {
+          this.target.style.setProperty(prop, val, 'important');
+        }
+        this.syncIframeToCode();
+        this.updateAssociatedCodeBox(this.target);
+      },
+
+      applyText(val) {
+        if (!this.target) return;
+        saveHistoryState();
+        this.target.innerText = val;
+        this.syncIframeToCode();
+        this.updateAssociatedCodeBox(this.target);
+      },
+
+      applyAttr(attr, val) {
+        if (!this.target) return;
+        saveHistoryState();
+        if (val === '') {
+          this.target.removeAttribute(attr);
+        } else {
+          this.target.setAttribute(attr, val);
+        }
+        this.syncIframeToCode();
+        this.updateAssociatedCodeBox(this.target);
+      },
+
+      updateAssociatedCodeBox(el) {
+        if (!el) return;
+        const box = document.getElementById('vi-associated-code-box');
+        if (!box) return;
+
+        const doc = el.ownerDocument;
+        if (!doc) return;
+
+        const allElements = [el, ...Array.from(el.querySelectorAll('*'))];
+        let cssOutput = '';
+        const processedRules = new Set();
+
+        allElements.forEach(item => {
+          if (!item || item.nodeType !== 1) return;
+          const tag = item.tagName.toLowerCase();
+          if (tag === 'script' || tag === 'style' || item.classList.contains('vi-floating-bar')) return;
+
+          const idStr = item.id ? '#' + item.id : '';
+          const classList = Array.from(item.classList).filter(c => !c.startsWith('data-vi') && c !== 'draggable');
+          const selector = idStr || (classList.length > 0 ? '.' + classList[0] : tag);
+
+          let inlineStyles = item.getAttribute('style') || '';
+          inlineStyles = inlineStyles
+            .replace(/\bdata-vi-[a-z]+:[^;]+;?/g, '')
+            .replace(/\boutline:[^;]+;?/g, '')
+            .replace(/\bcontenteditable:[^;]+;?/g, '')
+            .trim();
+
+          if (inlineStyles) {
+            const formattedInline = inlineStyles
+              .split(';')
+              .map(s => s.trim())
+              .filter(Boolean)
+              .map(s => `  ${s};`)
+              .join('\n');
+            const inlineRule = `${selector} {\n${formattedInline}\n}`;
+            if (!processedRules.has(inlineRule)) {
+              processedRules.add(inlineRule);
+              cssOutput += `/* Inline Style (${selector}) */\n${inlineRule}\n\n`;
+            }
+          }
+
+          if (cssAce) {
+            const stylesheetCss = cssAce.getValue();
+            const targetPatterns = [idStr, ...classList.map(c => '.' + c)].filter(Boolean);
+            
+            targetPatterns.forEach(pattern => {
+              const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const ruleRegex = new RegExp(`(?:[a-zA-Z0-9_\\-\\s>+~,]*${escaped}(?::[a-zA-Z\\-]+)?)\\s*\\{[^\\}]*\\}`, 'g');
+              const matches = stylesheetCss.match(ruleRegex);
+              if (matches) {
+                matches.forEach(m => {
+                  if (!processedRules.has(m)) {
+                    processedRules.add(m);
+                    cssOutput += `/* Stylesheet Rule (${pattern}) */\n${m}\n\n`;
+                  }
+                });
+              }
+            });
+          }
+        });
+
+        const tempDiv = doc.createElement('div');
+        const clone = el.cloneNode(true);
+        clone.querySelectorAll('[data-vi-selected], [data-vi-hover], [draggable]').forEach(c => {
+          c.removeAttribute('data-vi-selected');
+          c.removeAttribute('data-vi-hover');
+          c.removeAttribute('draggable');
+        });
+        clone.removeAttribute('data-vi-selected');
+        clone.removeAttribute('data-vi-hover');
+        clone.removeAttribute('draggable');
+        tempDiv.appendChild(clone);
+        let cleanHtml = tempDiv.innerHTML.trim();
+
+        box.value = `/* === COMPLETE ASSOCIATED CSS (ELEMENT & ALL CHILDREN) === */\n${cssOutput.trim() || '/* No custom CSS applied */'}\n\n/* === COMPLETE HTML SNIPPET === */\n${cleanHtml}`;
+      },
+
+      expandAssociatedCodeModal() {
+        if (!this.target) return;
+        const box = document.getElementById('vi-associated-code-box');
+        if (!box) return;
+
+        const content = box.value;
+        const cssMatch = content.match(/\/\* === COMPLETE ASSOCIATED CSS \(ELEMENT & ALL CHILDREN\) === \*\/\n([\s\S]*?)(?=\n\/\* === COMPLETE HTML SNIPPET === \*\/|$)/);
+        const htmlMatch = content.match(/\/\* === COMPLETE HTML SNIPPET === \*\/\n([\s\S]*)/);
+
+        const cssText = cssMatch ? cssMatch[1].trim() : '';
+        const htmlText = htmlMatch ? htmlMatch[1].trim() : '';
+
+        const tagName = this.target.tagName.toLowerCase();
+        const idStr = this.target.id ? '#' + this.target.id : '';
+        const classStr = this.target.className ? '.' + this.target.className.toString().replace(/\bdata-vi-[a-z]+\b/g, '').replace(/draggable/g, '').trim().split(' ')[0] : '';
+
+        const badgeEl = document.getElementById('modal-target-badge');
+        if (badgeEl) {
+          badgeEl.textContent = `<${tagName}${idStr}${classStr ? '.' + classStr : ''}>`;
+        }
+
+        const modal = document.getElementById('expanded-code-modal');
+        if (modal) {
+          modal.classList.add('open');
+        }
+
+        if (window.ace) {
+          if (!window.modalAceCss) {
+            window.modalAceCss = ace.edit("modal-ace-css");
+            window.modalAceCss.setTheme("ace/theme/one_dark");
+            window.modalAceCss.getSession().setMode("ace/mode/css");
+            setupAceOptions(window.modalAceCss);
+          }
+          window.modalAceCss.setValue(cssText, -1);
+          setTimeout(() => window.modalAceCss.resize(), 100);
+
+          if (!window.modalAceHtml) {
+            window.modalAceHtml = ace.edit("modal-ace-html");
+            window.modalAceHtml.setTheme("ace/theme/one_dark");
+            window.modalAceHtml.getSession().setMode("ace/mode/html");
+            setupAceOptions(window.modalAceHtml);
+          }
+          window.modalAceHtml.setValue(htmlText, -1);
+          setTimeout(() => window.modalAceHtml.resize(), 100);
+        }
+      },
+
+      closeExpandedCodeModal() {
+        const modal = document.getElementById('expanded-code-modal');
+        if (modal) modal.classList.remove('open');
+      },
+
+      applyModalChangesToTemplate() {
+        if (!this.target) return;
+        saveHistoryState();
+
+        const doc = this.target.ownerDocument;
+        if (!doc) return;
+
+        // 1. Apply HTML Snippet Edits to live preview element
+        if (window.modalAceHtml) {
+          const newHtml = window.modalAceHtml.getValue().trim();
+          if (newHtml) {
+            const tempDiv = doc.createElement('div');
+            tempDiv.innerHTML = newHtml;
+            const newNodes = Array.from(tempDiv.childNodes).filter(node => node.nodeType === 1 || (node.nodeType === 3 && node.textContent.trim()));
+
+            if (newNodes.length > 0) {
+              const parent = this.target.parentNode;
+              if (parent) {
+                let lastInserted = null;
+                newNodes.forEach(node => {
+                  if (lastInserted) {
+                    parent.insertBefore(node, lastInserted.nextSibling);
+                  } else {
+                    parent.insertBefore(node, this.target);
+                  }
+                  lastInserted = node;
+                });
+                this.target.remove();
+                if (lastInserted && lastInserted.nodeType === 1) {
+                  this.target = lastInserted;
+                }
+              }
+            }
+          }
+        }
+
+        // 2. Apply CSS Rules Edits to cssAce
+        if (window.modalAceCss && cssAce) {
+          const editedCss = window.modalAceCss.getValue().trim();
+          let currentCss = cssAce.getValue();
+
+          if (editedCss) {
+            const ruleBlocks = editedCss.match(/(?:[a-zA-Z0-9_\\-\\s>+~,.*#:]+)\s*\{[^}]*\}/g) || [];
+            ruleBlocks.forEach(block => {
+              const selectorMatch = block.match(/^([^{]+)\{/);
+              if (selectorMatch) {
+                const selector = selectorMatch[1].trim();
+                const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const existingRuleRegex = new RegExp(`${escaped}\\s*\\{[^}]*\\}`, 'g');
+                if (existingRuleRegex.test(currentCss)) {
+                  currentCss = currentCss.replace(existingRuleRegex, block);
+                } else {
+                  currentCss += '\n\n' + block;
+                }
+              }
+            });
+            cssAce.setValue(currentCss.replace(/\n\s*\n\s*\n/g, '\n\n').trim(), -1);
+          }
+        }
+
+        // 3. Sync HTML and Refresh Live Preview
+        this.syncIframeToCode();
+        renderPreview();
+        if (isLayersPanelOpen) buildLayersTree();
+
+        if (window.Swal) {
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: '⚡ Changes applied to template!',
+            showConfirmButton: false,
+            timer: 1500
+          });
+        }
+      },
+
+      copyModalAceCSS() {
+        if (window.modalAceCss) {
+          const text = window.modalAceCss.getValue();
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => {
+              if (window.Swal) Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'CSS copied to clipboard!', showConfirmButton: false, timer: 1500 });
+            });
+          }
+        }
+      },
+
+      copyModalAceHTML() {
+        if (window.modalAceHtml) {
+          const text = window.modalAceHtml.getValue();
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => {
+              if (window.Swal) Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'HTML copied to clipboard!', showConfirmButton: false, timer: 1500 });
+            });
+          }
+        }
+      },
+
+      copyElementCSS() {
+        if (!this.target) return;
+        const box = document.getElementById('vi-associated-code-box');
+        if (!box) return;
+
+        const content = box.value;
+        const cssMatch = content.match(/\/\* === COMPLETE ASSOCIATED CSS \(ELEMENT & ALL CHILDREN\) === \*\/\n([\s\S]*?)(?=\n\/\* === COMPLETE HTML SNIPPET === \*\/|$)/);
+        const cssText = cssMatch ? cssMatch[1].trim() : '';
+
+        if (cssText && navigator.clipboard) {
+          navigator.clipboard.writeText(cssText).then(() => {
+            if (window.Swal) Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'CSS copied to clipboard!', showConfirmButton: false, timer: 1500 });
+          });
+        } else if (cssText) {
+          box.select();
+          document.execCommand('copy');
+          if (window.Swal) Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Code copied!', showConfirmButton: false, timer: 1500 });
+        }
+      },
+
+      copyElementHTML() {
+        if (!this.target) return;
+        const box = document.getElementById('vi-associated-code-box');
+        if (!box) return;
+
+        const content = box.value;
+        const htmlMatch = content.match(/\/\* === COMPLETE HTML SNIPPET === \*\/\n([\s\S]*)/);
+        const htmlText = htmlMatch ? htmlMatch[1].trim() : '';
+
+        if (htmlText && navigator.clipboard) {
+          navigator.clipboard.writeText(htmlText).then(() => {
+            if (window.Swal) Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'HTML copied to clipboard!', showConfirmButton: false, timer: 1500 });
+          });
+        }
+      },
+
+      updateCustomShadow() {
+        if (!this.target) return;
+        saveHistoryState();
+        const x = document.getElementById('vi-bs-x').value + 'px';
+        const y = document.getElementById('vi-bs-y').value + 'px';
+        const blur = document.getElementById('vi-bs-blur').value + 'px';
+        const color = document.getElementById('vi-bs-color').value;
+        const shadow = `${x} ${y} ${blur} ${color}`;
+        this.applyStyle('box-shadow', shadow);
+      },
+
+      updateFilters() {
+        if (!this.target) return;
+        saveHistoryState();
+        const blur = document.getElementById('vi-filter-blur').value;
+        const bright = document.getElementById('vi-filter-bright').value;
+        const gray = document.getElementById('vi-filter-gray').value;
+
+        let filterStr = '';
+        if (blur > 0) filterStr += `blur(${blur}px) `;
+        if (bright != 100) filterStr += `brightness(${bright}%) `;
+        if (gray > 0) filterStr += `grayscale(${gray}%) `;
+
+        this.applyStyle('filter', filterStr.trim() || 'none');
+      },
+
+      updateTransform() {
+        if (!this.target) return;
+        saveHistoryState();
+        const rot = document.getElementById('vi-rotate').value;
+        const scale = document.getElementById('vi-scale').value;
+        let transStr = '';
+        if (rot != 0) transStr += `rotate(${rot}deg) `;
+        if (scale != 1) transStr += `scale(${scale}) `;
+        this.applyStyle('transform', transStr.trim() || 'none');
+      },
+
+      deleteSelected() {
+        if (!this.target) return;
+        saveHistoryState();
+        this.cleanupCSSForDeletedElement(this.target);
+        this.target.remove();
+        closeVisualInspector();
+        this.syncIframeToCode();
+        if (isLayersPanelOpen) buildLayersTree();
+        if (window.Swal) {
+          Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Element & associated CSS removed', showConfirmButton: false, timer: 1500 });
+        }
+      },
+
+      cleanupCSSForDeletedElement(el) {
+        if (!el || !cssAce) return;
+        const doc = el.ownerDocument;
+        if (!doc) return;
+
+        const elementsToDelete = [el, ...Array.from(el.querySelectorAll('*'))];
+        const targetSelectors = new Set();
+
+        elementsToDelete.forEach(item => {
+          if (item.id && item.id.trim()) {
+            const id = item.id.trim();
+            const remainingWithId = Array.from(doc.querySelectorAll('#' + id)).filter(node => !elementsToDelete.includes(node));
+            if (remainingWithId.length === 0) {
+              targetSelectors.add('#' + id);
+            }
+          }
+
+          if (item.classList && item.classList.length > 0) {
+            item.classList.forEach(cls => {
+              if (!cls || cls.startsWith('gjs-') || cls.startsWith('data-vi') || cls === 'draggable') return;
+              const remainingWithClass = Array.from(doc.querySelectorAll('.' + cls)).filter(node => !elementsToDelete.includes(node));
+              if (remainingWithClass.length === 0) {
+                targetSelectors.add('.' + cls);
+              }
+            });
+          }
+        });
+
+        if (targetSelectors.size === 0) return;
+
+        let currentCss = cssAce.getValue();
+        let modified = false;
+
+        targetSelectors.forEach(selector => {
+          const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const ruleBlockRegex = new RegExp(`(?:[a-zA-Z0-9_\\-\\s>+~,]*${escaped}(?::[a-zA-Z\\-]+)?)\\s*\\{[^\\}]*\\}`, 'g');
+          if (ruleBlockRegex.test(currentCss)) {
+            currentCss = currentCss.replace(ruleBlockRegex, '');
+            modified = true;
+          }
+        });
+
+        if (modified) {
+          currentCss = currentCss.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+          cssAce.setValue(currentCss, -1);
+        }
+      },
+
+      duplicateSelected() {
+        if (!this.target) return;
+        saveHistoryState();
+        const clone = this.target.cloneNode(true);
+        clone.removeAttribute('data-vi-selected');
+        clone.removeAttribute('data-vi-hover');
+        clone.removeAttribute('draggable');
+        this.target.parentNode.insertBefore(clone, this.target.nextSibling);
+        this.syncIframeToCode();
+        this.selectElement(clone);
+        if (isLayersPanelOpen) buildLayersTree();
+      },
+
+      applyBackgroundImage(url) {
+        if (!this.target) return;
+        saveHistoryState();
+        const cleanUrl = url.trim();
+        if (cleanUrl) {
+          this.applyStyle('background-image', `url("${cleanUrl}")`);
+        } else {
+          this.applyStyle('background-image', '');
+        }
+
+        VI._setVal('vi-bg-img-url', cleanUrl);
+        VI._setVal('vi-bg-img-url-media', cleanUrl);
+
+        const preview = document.getElementById('vi-bg-img-preview');
+        if (preview) {
+          if (cleanUrl) {
+            preview.style.display = 'block';
+            preview.src = cleanUrl;
+          } else {
+            preview.style.display = 'none';
+          }
+        }
+      },
+
+      handleBgSizeSelect(val) {
+        const customInput = document.getElementById('vi-bg-size-custom');
+        if (val === 'custom') {
+          if (customInput) customInput.style.display = 'block';
+          if (customInput && customInput.value.trim()) {
+            this.applyStyle('background-size', customInput.value.trim());
+          }
+        } else {
+          if (customInput) customInput.style.display = 'none';
+          this.applyStyle('background-size', val);
+        }
+      },
+
+      handleBgPosSelect(val) {
+        const customInput = document.getElementById('vi-bg-pos-custom');
+        if (val === 'custom') {
+          if (customInput) customInput.style.display = 'block';
+          if (customInput && customInput.value.trim()) {
+            this.applyStyle('background-position', customInput.value.trim());
+          }
+        } else {
+          if (customInput) customInput.style.display = 'none';
+          this.applyStyle('background-position', val);
+        }
+      },
+
+      clearStyles() {
+        if (!this.target) return;
+        saveHistoryState();
+        this.target.removeAttribute('style');
+        this.selectElement(this.target);
+        this.syncIframeToCode();
+      },
+
+      fetchGlobalBranding() {
+        if (typeof DOMAIN_ID === 'undefined' || !DOMAIN_ID) return;
+        fetch(`/api/global-branding-settings/${DOMAIN_ID}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data && !data.error) {
+              window.globalBranding = data;
+              console.log("✅ Global Branding Loaded:", window.globalBranding);
+            }
+          })
+          .catch(err => console.error("Error fetching global branding:", err));
+      },
+
+      applyBrandColor(prop, brandType) {
+        if (!window.globalBranding) return;
+        const val = brandType === 'primary' ? window.globalBranding.primary_color : window.globalBranding.secondary_color;
+        if (val) {
+          this.applyStyle(prop, val);
+          if (prop === 'color') {
+            const hexInput = document.getElementById('vi-color-hex');
+            if (hexInput) hexInput.value = val;
+          }
+          if (prop === 'background-color') {
+            const bgInput = document.getElementById('vi-bg-hex');
+            if (bgInput) bgInput.value = val;
+          }
+          if (window.Swal) {
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `🎨 ${brandType.toUpperCase()} brand color applied!`, showConfirmButton: false, timer: 1200 });
+          }
+        }
+      },
+
+      openGlobalBrandingModal() {
+        const primary = (window.globalBranding && window.globalBranding.primary_color) || '#ff4c00';
+        const secondary = (window.globalBranding && window.globalBranding.secondary_color) || '#0a2540';
+        const font = (window.globalBranding && window.globalBranding.font_family) || 'Inter, sans-serif';
+        const logo = (window.globalBranding && window.globalBranding.company_logo) || '';
+
+        if (!window.Swal) return;
+
+        Swal.fire({
+          title: `<i class="fa-solid fa-paintbrush" style="color: #c084fc;"></i> Global Domain Branding Settings`,
+          width: '620px',
+          backdrop: 'rgba(15, 23, 42, 0.45)',
+          customClass: { popup: 'vi-swal-popup' },
+          html: `
+            <div style="display: flex; flex-direction: column; gap: 14px; text-align: left; margin-top: 10px;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <label style="font-weight: 700; color: #38bdf8; font-size: 12px; display: block; margin-bottom: 4px;">Primary Brand Color:</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="swal-brand-primary-picker" value="${primary}" style="width: 36px; height: 34px; border: none; border-radius: 4px; cursor: pointer; background: none;" oninput="document.getElementById('swal-brand-primary-hex').value=this.value">
+                    <input type="text" id="swal-brand-primary-hex" value="${primary}" style="flex: 1; background: #0f172a; border: 1px solid #334155; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 12px;">
+                  </div>
+                </div>
+                <div>
+                  <label style="font-weight: 700; color: #c084fc; font-size: 12px; display: block; margin-bottom: 4px;">Secondary Brand Color:</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="color" id="swal-brand-secondary-picker" value="${secondary}" style="width: 36px; height: 34px; border: none; border-radius: 4px; cursor: pointer; background: none;" oninput="document.getElementById('swal-brand-secondary-hex').value=this.value">
+                    <input type="text" id="swal-brand-secondary-hex" value="${secondary}" style="flex: 1; background: #0f172a; border: 1px solid #334155; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 12px;">
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-weight: 700; color: #94a3b8; font-size: 12px; display: block; margin-bottom: 4px;">Brand Font Family:</label>
+                <input type="text" id="swal-brand-font" value="${font}" style="width: 100%; box-sizing: border-box; background: #0f172a; border: 1px solid #334155; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 12px;">
+              </div>
+
+              <div>
+                <label style="font-weight: 700; color: #94a3b8; font-size: 12px; display: block; margin-bottom: 4px;">Company Logo URL:</label>
+                <input type="text" id="swal-brand-logo" value="${logo}" style="width: 100%; box-sizing: border-box; background: #0f172a; border: 1px solid #334155; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 12px;" placeholder="https://example.com/logo.png">
+              </div>
+
+              <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="modal-apply-btn" style="flex: 1; justify-content: center;" onclick="VI.applyBrandThemeToTemplate()"><i class="fa-solid fa-bolt"></i> Apply Theme to Template</button>
+                <button class="modal-apply-btn" style="flex: 1; justify-content: center; background: linear-gradient(135deg, #7c3aed, #4f46e5);" onclick="VI.saveGlobalBranding()"><i class="fa-solid fa-floppy-disk"></i> Save Global Branding</button>
+              </div>
+            </div>
+          `,
+          showConfirmButton: false,
+          showCloseButton: true,
+          background: '#0f172a',
+          color: '#ffffff'
+        });
+      },
+
+      applyBrandThemeToTemplate() {
+        const primary = document.getElementById('swal-brand-primary-hex').value.trim();
+        const secondary = document.getElementById('swal-brand-secondary-hex').value.trim();
+        const font = document.getElementById('swal-brand-font').value.trim();
+
+        saveHistoryState();
+        if (cssAce) {
+          let css = cssAce.getValue();
+          const brandCssRule = `:root {\n  --brand-primary: ${primary};\n  --brand-secondary: ${secondary};\n  --brand-font: '${font}';\n}\n\n`;
+          if (css.includes(':root {')) {
+            css = css.replace(/:root\s*\{[^}]*\}/, `:root {\n  --brand-primary: ${primary};\n  --brand-secondary: ${secondary};\n  --brand-font: '${font}';\n}`);
+          } else {
+            css = brandCssRule + css;
+          }
+          cssAce.setValue(css, -1);
+        }
+
+        this.syncIframeToCode();
+        renderPreview();
+        if (window.Swal) {
+          Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: '🎨 Global Brand Theme Applied!', showConfirmButton: false, timer: 1500 });
+        }
+      },
+
+      saveGlobalBranding() {
+        const primary = document.getElementById('swal-brand-primary-hex').value.trim();
+        const secondary = document.getElementById('swal-brand-secondary-hex').value.trim();
+        const font = document.getElementById('swal-brand-font').value.trim();
+        const logo = document.getElementById('swal-brand-logo').value.trim();
+
+        fetch('/api/global-branding-settings/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            domain_id: DOMAIN_ID,
+            primary_color: primary,
+            secondary_color: secondary,
+            font_family: font,
+            company_logo: logo
+          })
+        })
+        .then(r => r.json())
+        .then(data => {
+          window.globalBranding = { primary_color: primary, secondary_color: secondary, font_family: font, company_logo: logo };
+          if (window.Swal) {
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: '💾 Global Branding Saved!', showConfirmButton: false, timer: 1500 });
+          }
+        })
+        .catch(err => {
+          if (window.Swal) Swal.fire({ icon: 'error', title: 'Save Failed', text: err.message });
+        });
+      },
+
+      syncIframeToCode() {
+        const iframe = document.getElementById('preview-iframe');
+        if (!iframe || !htmlAce) return;
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        if (!doc) return;
+
+        const tempDiv = doc.createElement('div');
+        tempDiv.innerHTML = doc.body.innerHTML;
+        tempDiv.querySelectorAll('[data-vi-hover]').forEach(el => el.removeAttribute('data-vi-hover'));
+        tempDiv.querySelectorAll('[data-vi-selected]').forEach(el => el.removeAttribute('data-vi-selected'));
+        tempDiv.querySelectorAll('[data-vi-dragover]').forEach(el => el.removeAttribute('data-vi-dragover'));
+        tempDiv.querySelectorAll('[draggable]').forEach(el => el.removeAttribute('draggable'));
+        tempDiv.querySelectorAll('.vi-floating-bar').forEach(el => el.remove());
+        tempDiv.querySelectorAll('script[data-preview-script]').forEach(el => el.remove());
+
+        let cleanHtml = tempDiv.innerHTML.replace(/^[\s\r\n]+/, '').replace(/[\s\r\n]+$/, '');
+        
+        isSyncingFromVI = true;
+        htmlAce.setValue(cleanHtml, -1);
+        isSyncingFromVI = false;
+
+        markAsDirty();
+      },
+
+      _setVal(id, val) {
+        const el = document.getElementById(id);
+        if (el && val !== undefined && val !== null) el.value = val;
+      },
+
+      _rgbToHex(rgb) {
+        if (!rgb || rgb === 'transparent' || rgb.indexOf('rgba(0, 0, 0, 0)') !== -1) return '#ffffff';
+        if (rgb.startsWith('#')) return rgb;
+        const matches = rgb.match(/\d+/g);
+        if (!matches || matches.length < 3) return '#ffffff';
+        return '#' + matches.slice(0, 3).map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
+      }
+    };
+
+    function closeVisualInspector() {
+      document.getElementById('visual-inspector-panel').classList.remove('open');
+      const iframe = document.getElementById('preview-iframe');
+      if (iframe) {
+        try {
+          const doc = iframe.contentDocument || iframe.contentWindow.document;
+          doc.querySelectorAll('[data-vi-selected]').forEach(el => el.removeAttribute('data-vi-selected'));
+          doc.querySelectorAll('.vi-floating-bar').forEach(el => el.remove());
+        } catch(e) {}
+      }
+    }
+
+    function ensurePDFPrintColorAdjust() {
+      if (!cssAce) return;
+      let css = cssAce.getValue();
+      const printRule = `@media print {\n  * {\n    -webkit-print-color-adjust: exact !important;\n    print-color-adjust: exact !important;\n    color-adjust: exact !important;\n  }\n}\n\n`;
+      if (!css.includes('print-color-adjust')) {
+        css = printRule + css;
+        cssAce.setValue(css, -1);
+        if (window.Swal) {
+          Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: '📄 PDF Print Color Adjust Rule Added!', showConfirmButton: false, timer: 1800 });
+        }
+      }
+    }
+
+    function openPDFPrintPreview() {
+      ensurePDFPrintColorAdjust();
+      const htmlContent = htmlAce ? htmlAce.getValue().trim() : '';
+      const cssContent = cssAce ? cssAce.getValue().trim() : '';
+      const jsContent = jsAce ? jsAce.getValue().trim() : '';
+
+      const win = window.open('', '_blank');
+      if (win) {
+        win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>PDF Print View - ${TEMPLATE_ID}</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @media print {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+    }
+    ${cssContent}
+  </style>
+</head>
+<body onload="setTimeout(() => window.print(), 300)">
+  ${htmlContent}
+  <script>${jsContent}<\/script>
+</body>
+</html>`);
+        win.document.close();
+      }
+    }
+
+    function openPreviewTab() {
+      const htmlContent = htmlAce ? htmlAce.getValue() : "";
+      const cssContent = cssAce ? cssAce.getValue() : "";
+      const jsContent = jsAce ? jsAce.getValue() : "";
+
+      const win = window.open();
+      if (win) {
+        win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>Preview - ${TEMPLATE_ID}</title>
+  <style>${cssContent}</style>
+</head>
+<body>
+  ${htmlContent}
+  <script>${jsContent}<\/script>
+</body>
+</html>`);
+        win.document.close();
+      }
+    }
+
+    function saveTemplate() {
+      if (!htmlAce || !cssAce || !jsAce) return;
+      ensurePDFPrintColorAdjust();
+
+      const saveBtn = document.getElementById('save-btn');
+      const originalText = saveBtn.innerHTML;
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
+
+      const payload = {
+        templateId: TEMPLATE_ID,
+        html: htmlAce.getValue().trim(),
+        css: cssAce.getValue().trim(),
+        custom_js: jsAce.getValue().trim(),
+        domainId: DOMAIN_ID
+      };
+
+      fetch('/save-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+        if (data.error) {
+          Swal.fire({ title: 'Save Failed', text: data.error, icon: 'error', confirmButtonColor: '#ef4444' });
+        } else {
+          markAsClean();
+          Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Template saved successfully!', showConfirmButton: false, timer: 2000 });
+        }
+      })
+      .catch(err => {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+        console.error("Save error:", err);
+        Swal.fire({ title: 'Network Error', text: 'Failed to communicate with server.', icon: 'error', confirmButtonColor: '#ef4444' });
+      });
+    }
+  </script>
+</body>
+</html>

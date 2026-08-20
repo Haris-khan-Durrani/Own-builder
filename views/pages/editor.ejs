@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrapesJS Editor</title>
+    <!-- GrapesJS CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/grapesjs/dist/css/grapes.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #gjs {
+            height: 100vh;
+            border: 1px solid #ccc;
+        }
+        #blocks {
+            background: #f5f5f5;
+            padding: 10px;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- GrapesJS container -->
+    <div id="gjs"></div>
+
+    <!-- Blocks container -->
+    <div id="blocks"></div>
+
+    <!-- GrapesJS JavaScript -->
+    <script src="https://unpkg.com/grapesjs"></script>
+    <script>
+        const editor = grapesjs.init({
+            container: '#gjs', // Main editor container
+            height: '100%', // Editor height
+            width: 'auto', // Editor width
+            storageManager: false, // Disable storage
+            fromElement: true, // Load content from the container
+            panels: { defaults: [] }, // Optional, remove default panels
+            blockManager: {
+                appendTo: '#blocks', // Target the blocks container
+            },
+        });
+
+        // Add a sample block
+        editor.BlockManager.add('test-block', {
+            label: 'Test Block',
+            content: '<div style="padding:10px; background:#EEE">Test Block Content</div>',
+        });
+    </script>
+</body>
+</html>

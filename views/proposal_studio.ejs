@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proposal Studio · <%= template.template_title %></title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --brand-primary: <%= domain.brand_primary_color || '#ff4c00' %>;
+      --brand-secondary: <%= domain.brand_secondary_color || '#0a2540' %>;
+      --brand-font: 'Inter', sans-serif;
+      --bg-dark: #0f172a;
+      --panel-bg: #1e2433;
+      --panel-border: rgba(255,255,255,0.1);
+      --text-light: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+    body {
+      margin: 0; padding: 0;
+      font-family: var(--brand-font);
+      background: var(--bg-dark);
+      color: var(--text-light);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* TOPBAR */
+    #studio-header {
+      height: 56px;
+      background: #181f2e;
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      z-index: 100;
+    }
+    .brand-logo {
+      display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; color: #fff;
+    }
+    .brand-logo .dot {
+      width: 28px; height: 28px; background: var(--brand-primary); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;
+    }
+    .topbar-sep { width: 1px; height: 24px; background: var(--panel-border); }
+    .title-input {
+      background: #252d40; border: 1px solid var(--panel-border); color: #fff;
+      padding: 6px 12px; border-radius: 6px; font-size: 13px; outline: none; width: 220px;
+    }
+    .title-input:focus { border-color: #3b82f6; }
+    .topbar-spacer { flex: 1; }
+    .btn-action {
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px;
+      border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+      transition: all 0.15s ease; text-decoration: none; white-space: nowrap;
+    }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-success { background: #10b981; color: #fff; }
+    .btn-success:hover { background: #059669; }
+    .btn-ghost { background: #2e3a54; color: var(--text-light); border: 1px solid var(--panel-border); }
+    .btn-ghost:hover { background: #3b4968; }
+
+    /* MAIN STUDIO WORKSPACE (3-PANE LAYOUT) */
+    #studio-body {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* PANE 1: LEFT NAVIGATOR */
+    #left-navigator {
+      width: 240px;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+    }
+    .pane-header {
+      padding: 14px 16px; font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--text-muted); border-bottom: 1px solid var(--panel-border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .section-list {
+      flex: 1; overflow-y: auto; padding: 10px;
+    }
+    .section-item {
+      padding: 10px 12px; margin-bottom: 6px; background: #252d40; border: 1px solid var(--panel-border);
+      border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-light);
+      display: flex; align-items: center; justify-content: space-between; transition: all 0.15s ease;
+    }
+    .section-item:hover, .section-item.active {
+      background: #2e3a54; border-color: #3b82f6; transform: translateX(2px);
+    }
+    .section-item .sec-icon { margin-right: 8px; color: #60a5fa; }
+
+    /* PANE 2: CENTER A4 LIVE CANVAS */
+    #center-canvas {
+      flex: 1;
+      background: #090d16;
+      padding: 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    /* A4 PAGE CARD WRAPPERS - 980px PROPOSAL PAPER SHEET */
+    .a4-page-card {
+      width: 980px;
+      min-height: 1200px;
+      background: #ffffff;
+      color: #1e293b;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+      border-radius: 4px;
+      margin-bottom: 40px;
+      position: relative;
+      overflow: visible;
+      box-sizing: border-box;
+      transition: transform 0.2s ease;
+    }
+    .a4-page-badge {
+      position: absolute;
+      top: -26px;
+      left: 0;
+      background: rgba(37,99,235,0.9);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 12px;
+      border-radius: 4px 4px 0 0;
+      z-index: 10;
+      letter-spacing: 0.05em;
+    }
+
+    /* PANE 3: RIGHT FORM CONTROLS */
+    #right-controls {
+      width: 380px;
+      background: var(--panel-bg);
+      border-left: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+    }
+    .form-scroll-body {
+      flex: 1; overflow-y: auto; padding: 16px;
+    }
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px;
+    }
+    .form-group label code {
+      background: rgba(59,130,246,0.2); color: #93c5fd; padding: 2px 5px; border-radius: 4px; font-size: 10px;
+    }
+    .form-control {
+      width: 100%; background: #252d40; border: 1px solid var(--panel-border);
+      color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none;
+      font-family: inherit;
+    }
+    .form-control:focus { border-color: #3b82f6; }
+
+    /* HIGHLIGHT EFFECT ON LIVE BOUND TAGS */
+    .live-bound-tag {
+      background: #fef08a !important;
+      color: #854d0e !important;
+      padding: 2px 4px !important;
+      border-radius: 3px !important;
+      font-weight: 700 !important;
+      transition: background 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER BAR -->
+  <div id="studio-header">
+    <div class="brand-logo">
+      <div class="dot"><i class="fa fa-file-text-o"></i></div>
+      <span>Proposal Studio</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <input type="text" id="prop-title" class="title-input" value="<%= template.template_title %>" placeholder="Proposal Title...">
+    <div class="topbar-sep"></div>
+    
+    <!-- CANVAS ZOOM / FIT CONTROLS -->
+    <div style="display:flex; align-items:center; gap:4px; background:#252d40; padding:2px 8px; border-radius:6px; border:1px solid var(--panel-border);">
+      <button onclick="zoomCanvas(-0.05)" class="btn-action btn-ghost" style="padding:2px 6px; font-size:11px;">− Zoom</button>
+      <span id="zoom-text" style="font-size:12px; color:var(--text-light); width:45px; text-align:center;">65%</span>
+      <button onclick="zoomCanvas(0.05)" class="btn-action btn-ghost" style="padding:2px 6px; font-size:11px;">+ Zoom</button>
+      <button onclick="fitCanvas()" class="btn-action btn-primary" style="padding:2px 8px; font-size:11px;">Fit Screen</button>
+    </div>
+
+    <div class="topbar-spacer"></div>
+    <a href="/template/<%= template.template_id %>?domain_id=<%= domain_id %>&token=<%= token %>" class="btn-action btn-ghost">
+      <i class="fa fa-pencil"></i> Open in GrapesJS
+    </a>
+    <button onclick="exportPDF()" class="btn-action btn-ghost">
+      <i class="fa fa-file-pdf-o"></i> Export PDF
+    </button>
+    <button onclick="saveProposalStudio()" class="btn-action btn-success">
+      <i class="fa fa-floppy-o"></i> Save Proposal
+    </button>
+  </div>
+
+  <!-- MAIN STUDIO WORKSPACE -->
+  <div id="studio-body">
+
+    <!-- PANE 1: LEFT NAVIGATOR -->
+    <div id="left-navigator">
+      <div class="pane-header">
+        <span>Form Sections</span>
+        <i class="fa fa-sliders"></i>
+      </div>
+      <div class="section-list" id="sectionNavList">
+        <div class="section-item active" onclick="activateSection('detected')">
+          <span><i class="fa fa-edit sec-icon"></i> 1. Template Inputs</span>
+          <i class="fa fa-chevron-right" style="font-size:10px; color:#64748b;"></i>
+        </div>
+        <div class="section-item" onclick="activateSection('banking')">
+          <span><i class="fa fa-university sec-icon"></i> 2. Bank Details</span>
+          <i class="fa fa-chevron-right" style="font-size:10px; color:#64748b;"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANE 2: CENTER LIVE A4 CANVAS PREVIEW -->
+    <div id="center-canvas">
+      <style id="customTemplateCss">
+        <%- template.css %>
+      </style>
+
+      <!-- CANVAS MODE: A4 PAGES CONTAINER WITH PAGE BREAK ENGINE -->
+      <div id="pagesContainer" style="display:flex; flex-direction:column; align-items:center; transform-origin: top center; transition: transform 0.2s ease;">
+        <!-- Page cards auto-rendered here -->
+      </div>
+    </div>
+
+    <!-- PANE 3: RIGHT FORM CONTROLS -->
+    <div id="right-controls">
+      <div class="pane-header">
+        <span id="formTitle">Edit Template Fields</span>
+        <i class="fa fa-pencil"></i>
+      </div>
+      <div class="form-scroll-body">
+        
+        <!-- FORM 1: DYNAMIC DETECTED SHORTCODES -->
+        <div id="form-detected">
+          <p style="margin:0 0 12px 0; font-size:12px; color:var(--text-muted);">
+            All placeholders found in this template are listed below. Typing in any field updates the document live!
+          </p>
+          <div id="dynamicFieldsContainer">
+            <!-- Dynamic Form Inputs Created Here -->
+          </div>
+        </div>
+
+        <!-- FORM 2: BANKING & PAYMENTS -->
+        <div id="form-banking" style="display:none;">
+          <div class="form-group">
+            <label>Account Title <code>[Banktile]</code></label>
+            <input type="text" class="form-control" id="in-Banktile" value="Advisor Zone Business Setup LLC" oninput="syncAllShortcodesToCanvas()">
+          </div>
+          <div class="form-group">
+            <label>Account Number <code>[Accountnumber]</code></label>
+            <input type="text" class="form-control" id="in-Accountnumber" value="1029384756001" oninput="syncAllShortcodesToCanvas()">
+          </div>
+          <div class="form-group">
+            <label>IBAN Number <code>[Ibannumber]</code></label>
+            <input type="text" class="form-control" id="in-Ibannumber" value="AE0303300001029384756001" oninput="syncAllShortcodesToCanvas()">
+          </div>
+          <div class="form-group">
+            <label>Bank Name <code>[bank]</code></label>
+            <input type="text" class="form-control" id="in-bank" value="Emirates NBD" oninput="syncAllShortcodesToCanvas()">
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const rawTemplateHtml = `<%- template.template.replace(/`/g, '\\`') %>`;
+    let canvasZoomScale = 0.65;
+    let detectedShortcodeValues = {};
+
+    const shortcodeLabels = {
+      'cname': 'Client Name',
+      'cemail': 'Client Email',
+      'companyname': 'Company Name',
+      'cphone': 'Phone Number',
+      'pdte': 'Day',
+      'pmonth': 'Month',
+      'pyear': 'Year',
+      'price': 'License Price',
+      'renewal_amount': 'Renewal Amount',
+      'AddMoreAmount': 'Pro & Service Fee',
+      '1st_year_price1': '1st Year Price',
+      '2nd_year_price2': '2nd Year Price',
+      'ActivityLabel': 'Activity Label',
+      'activityname': 'Activity Name',
+      'ltype': 'License Type',
+      'comptype_label': 'Company Type',
+      'Activitydescription': 'Activity Description',
+      'normalpackage': 'Package Name',
+      'visa': 'Visa Quota',
+      'shareholders': 'Shareholders',
+      'Licensetype': 'License Category',
+      'submission_id': 'Verification Code',
+      'Banktile': 'Bank Account Title',
+      'Accountnumber': 'Account Number',
+      'Ibannumber': 'IBAN Number',
+      'bank': 'Bank Name',
+      'branch': 'Branch'
+    };
+
+    const defaultSampleValues = {
+      'cname': 'John Doe',
+      'cemail': 'john@acme.com',
+      'companyname': 'Acme Enterprises',
+      'cphone': '+971 50 123 4567',
+      'pdte': '16',
+      'pmonth': 'August',
+      'pyear': '2026',
+      'price': '15,000 AED',
+      'renewal_amount': '12,500 AED',
+      'AddMoreAmount': '2,500 AED',
+      '1st_year_price1': '15,000 AED',
+      '2nd_year_price2': '13,500 AED',
+      'ActivityLabel': 'Commercial / General Trading',
+      'activityname': 'Commercial Trading',
+      'ltype': 'Commercial License',
+      'comptype_label': 'LLC',
+      'Activitydescription': 'General Trading & Commercial Services',
+      'normalpackage': 'Standard Package',
+      'visa': '1 Visa Quota',
+      'shareholders': '1 Shareholder',
+      'Licensetype': 'Freezone Standard',
+      'submission_id': 'PRP-2026-9821',
+      'Banktile': 'Advisor Zone Business Setup LLC',
+      'Accountnumber': '1029384756001',
+      'Ibannumber': 'AE0303300001029384756001',
+      'bank': 'Emirates NBD',
+      'branch': 'Main Branch Dubai'
+    };
+
+    // ── 1. DETECT ALL SHORTCODES & BUILD DYNAMIC FORM ──
+    function buildDynamicShortcodeForms() {
+      const matches = rawTemplateHtml.match(/\[([a-zA-Z0-9_]+)\]/g) || [];
+      const uniqueTags = Array.from(new Set(matches.map(m => m.replace('[', '').replace(']', ''))));
+      
+      const container = document.getElementById('dynamicFieldsContainer');
+      container.innerHTML = '';
+
+      if (uniqueTags.length === 0) {
+        container.innerHTML = '<p style="font-size:12px; color:#94a3b8;">No bracket placeholders detected in this template. You can click directly on any text on the canvas to edit!</p>';
+        return;
+      }
+
+      uniqueTags.forEach(tag => {
+        const friendlyLabel = shortcodeLabels[tag] || tag;
+        const initialVal = defaultSampleValues[tag] || `[${tag}]`;
+        detectedShortcodeValues[tag] = initialVal;
+
+        const group = document.createElement('div');
+        group.className = 'form-group';
+        group.innerHTML = `
+          <label>${friendlyLabel} <code>[${tag}]</code></label>
+          <input type="text" class="form-control" id="sc_input_${tag}" value="${initialVal}" oninput="detectedShortcodeValues['${tag}'] = this.value; syncAllShortcodesToCanvas();" placeholder="Enter ${friendlyLabel}...">
+        `;
+        container.appendChild(group);
+      });
+    }
+
+    // ── 2. PERFECT PAGE SPLITTER FOR GRAPESJS PAGEBREAK ATTRIBUTES ──
+    function renderA4PageCards() {
+      const container = document.getElementById('pagesContainer');
+      container.innerHTML = '';
+
+      // Split raw template HTML cleanly by any <pagebreak ...> tag or wrapper
+      let rawPages = rawTemplateHtml.split(/<\/?pagebreak[^>]*>|<!--\s*pagebreak\s*-->/gi)
+                                   .map(p => p.trim())
+                                   .filter(p => p.length > 30);
+
+      if (rawPages.length === 0) {
+        rawPages = [rawTemplateHtml];
+      }
+
+      rawPages.forEach((pageHtml, idx) => {
+        const card = document.createElement('div');
+        card.className = 'a4-page-card';
+        card.innerHTML = `
+          <div class="a4-page-badge">Page ${idx + 1} of ${rawPages.length}</div>
+          <div class="a4-page-content" contenteditable="true" style="outline:none; width:100%; height:100%;">
+            ${pageHtml}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      fitCanvas();
+      syncAllShortcodesToCanvas();
+    }
+
+    // ── 3. CANVAS ZOOM / FIT SCALE HELPERS ──
+    function zoomCanvas(delta) {
+      canvasZoomScale = Math.min(1.2, Math.max(0.3, canvasZoomScale + delta));
+      applyZoomScale();
+    }
+
+    function fitCanvas() {
+      const centerPane = document.getElementById('center-canvas');
+      const paneWidth = centerPane.clientWidth - 60;
+      canvasZoomScale = Math.min(0.75, Math.max(0.35, paneWidth / 1000));
+      applyZoomScale();
+    }
+
+    function applyZoomScale() {
+      const container = document.getElementById('pagesContainer');
+      if (container) {
+        container.style.transform = `scale(${canvasZoomScale})`;
+      }
+      const zoomText = document.getElementById('zoom-text');
+      if (zoomText) zoomText.textContent = Math.round(canvasZoomScale * 100) + '%';
+    }
+
+    // ── 4. LIVE SHORTCODE SYNC ENGINE ──
+    function syncAllShortcodesToCanvas() {
+      const cards = document.querySelectorAll('.a4-page-content');
+      cards.forEach(card => {
+        let html = card.innerHTML;
+        Object.keys(detectedShortcodeValues).forEach(tag => {
+          const key = `[${tag}]`;
+          const val = detectedShortcodeValues[tag];
+          if (html.includes(key)) {
+            html = html.split(key).join(`<span class="live-bound-tag">${val}</span>`);
+          }
+        });
+        card.innerHTML = html;
+      });
+    }
+
+    function activateSection(secId) {
+      document.querySelectorAll('.section-item').forEach(el => el.classList.remove('active'));
+      const activeItem = Array.from(document.querySelectorAll('.section-item')).find(el => el.getAttribute('onclick').includes(secId));
+      if (activeItem) activeItem.classList.add('active');
+
+      document.querySelectorAll('#right-controls > .form-scroll-body > div').forEach(el => el.style.display = 'none');
+      const targetForm = document.getElementById(`form-${secId}`);
+      if (targetForm) targetForm.style.display = 'block';
+
+      const titleMap = {
+        'detected': 'Edit Template Fields',
+        'banking': 'Bank Account Details'
+      };
+      document.getElementById('formTitle').textContent = titleMap[secId] || 'Form Controls';
+    }
+
+    async function saveProposalStudio() {
+      const title = document.getElementById('prop-title').value;
+      
+      // Perform safe shortcode replacement on original HTML structure to preserve GrapesJS tags 100%
+      let compiledHtml = rawTemplateHtml;
+      Object.keys(detectedShortcodeValues).forEach(tag => {
+        const key = `[${tag}]`;
+        const val = detectedShortcodeValues[tag];
+        if (val && val !== key) {
+          compiledHtml = compiledHtml.split(key).join(val);
+        }
+      });
+
+      const tempid = "<%= template.template_id %>";
+      const domainId = "<%= domain_id %>";
+
+      Swal.fire({
+        title: 'Saving Proposal...',
+        text: 'Saving template content...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        const response = await fetch('/api/studio/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            templateId: tempid,
+            domainId: domainId,
+            title: title,
+            html: compiledHtml
+          })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          Swal.fire('Saved!', 'Proposal saved successfully.', 'success');
+        } else {
+          Swal.fire('Error', result.error || 'Failed to save proposal', 'error');
+        }
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    function exportPDF() {
+      window.print();
+    }
+
+    // Initialize Page State & Render
+    window.addEventListener('load', () => {
+      buildDynamicShortcodeForms();
+      renderA4PageCards();
+      setTimeout(fitCanvas, 200);
+    });
+  </script>
+</body>
+</html>

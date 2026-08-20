@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Builder · <%= template.template_title %></title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --brand-primary: <%= domain.brand_primary_color || '#ff4c00' %>;
+      --brand-secondary: <%= domain.brand_secondary_color || '#0a2540' %>;
+      --brand-font: 'Inter', sans-serif;
+      --bg-dark: #0f172a;
+      --panel-bg: #1e2433;
+      --panel-border: rgba(255,255,255,0.1);
+      --text-light: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+    body {
+      margin: 0; padding: 0;
+      font-family: var(--brand-font);
+      background: var(--bg-dark);
+      color: var(--text-light);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* TOPBAR */
+    #gb-header {
+      height: 56px;
+      background: #181f2e;
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      z-index: 100;
+    }
+    .brand-logo {
+      display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; color: #fff;
+    }
+    .brand-logo .dot {
+      width: 28px; height: 28px; background: #2563eb; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;
+    }
+    .topbar-sep { width: 1px; height: 24px; background: var(--panel-border); }
+    .title-input {
+      background: #252d40; border: 1px solid var(--panel-border); color: #fff;
+      padding: 6px 12px; border-radius: 6px; font-size: 13px; outline: none; width: 240px;
+    }
+    .title-input:focus { border-color: #2563eb; }
+    .topbar-spacer { flex: 1; }
+    .btn-action {
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px;
+      border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+      transition: all 0.15s ease; text-decoration: none; white-space: nowrap;
+    }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue:hover { background: #1d4ed8; }
+    .btn-success { background: #10b981; color: #fff; }
+    .btn-success:hover { background: #059669; }
+    .btn-ghost { background: #2e3a54; color: var(--text-light); border: 1px solid var(--panel-border); }
+    .btn-ghost:hover { background: #3b4968; }
+
+    /* WORKSPACE LAYOUT */
+    #gb-body {
+      flex: 1; display: flex; overflow: hidden;
+    }
+
+    /* LEFT SIDEBAR: DRAG & DROP GLOBAL PALETTE */
+    #gb-left-palette {
+      width: 280px;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--panel-border);
+      display: flex; flex-direction: column;
+    }
+    .pane-header {
+      padding: 14px 16px; font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--text-muted); border-bottom: 1px solid var(--panel-border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .block-list {
+      flex: 1; overflow-y: auto; padding: 12px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .drag-block-card {
+      padding: 12px; background: #252d40; border: 1px dashed #60a5fa;
+      border-radius: 8px; cursor: grab; transition: all 0.15s ease;
+      display: flex; align-items: center; gap: 10px; user-select: none;
+    }
+    .drag-block-card:hover {
+      background: #2e3a54; border-color: #3b82f6; transform: translateY(-2px);
+    }
+    .drag-block-card .icon {
+      width: 34px; height: 34px; background: rgba(37,99,235,0.2); color: #60a5fa;
+      border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 15px;
+    }
+    .drag-block-card .info { flex: 1; }
+    .drag-block-card .info strong { display: block; font-size: 13px; color: #fff; }
+    .drag-block-card .info span { font-size: 10px; color: #93c5fd; }
+    .global-badge {
+      background: #2563eb; color: #fff; font-size: 9px; font-weight: 700;
+      padding: 2px 6px; border-radius: 99px; text-transform: uppercase;
+    }
+
+    /* CENTER CANVAS */
+    #gb-center-canvas {
+      flex: 1; background: #090d16; padding: 24px; overflow-y: auto;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    /* A4 PAGE SHEETS */
+    .a4-page-sheet {
+      width: 920px;
+      min-height: 1180px;
+      background: #ffffff;
+      color: #1e293b;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+      border-radius: 4px;
+      margin-bottom: 40px;
+      position: relative;
+      padding: 40px;
+      box-sizing: border-box;
+      transform-origin: top center;
+      transition: transform 0.2s ease;
+    }
+    .page-header-tag {
+      position: absolute; top: -26px; left: 0;
+      background: #2563eb; color: #fff; font-size: 11px; font-weight: 700;
+      padding: 3px 12px; border-radius: 4px 4px 0 0; letter-spacing: 0.05em;
+    }
+
+    /* DROP TARGET & BLOCKS IN CANVAS */
+    .canvas-drop-zone {
+      min-height: 800px; padding: 10px; outline: none;
+    }
+    .dropped-global-block {
+      border: 2px solid #2563eb; border-radius: 6px; padding: 16px; margin-bottom: 16px;
+      background: #f8fafc; position: relative;
+    }
+    .dropped-global-block::before {
+      content: '🌐 GLOBAL SHARED BLOCK (1-CLICK SYNCED)';
+      position: absolute; top: -11px; left: 14px; background: #2563eb; color: #fff;
+      font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.05em;
+    }
+    .block-delete-btn {
+      position: absolute; top: 8px; right: 8px; background: #ef4444; color: #fff;
+      border: none; border-radius: 4px; width: 24px; height: 24px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 11px;
+    }
+
+    /* GLOBAL EDIT MODAL */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(15,23,42,0.85); z-index: 9999; display: none;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-card {
+      width: 650px; max-width: 95vw; background: #1e2433; border: 1px solid var(--panel-border);
+      border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+    }
+    .modal-header {
+      padding: 16px 20px; background: #181f2e; border-bottom: 1px solid var(--panel-border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-body { padding: 20px; overflow-y: auto; max-height: 70vh; }
+    .modal-footer {
+      padding: 16px 20px; background: #181f2e; border-top: 1px solid var(--panel-border);
+      display: flex; justify-content: flex-end; gap: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- GLOBAL BLOCK EDIT MODAL -->
+  <div class="modal-overlay" id="globalBlockModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <strong style="color:#fff; font-size:15px;" id="modalBlockTitle">🌐 Edit Master Global Block</strong>
+        <button onclick="closeGlobalModal()" style="background:none; border:none; color:#94a3b8; font-size:16px; cursor:pointer;"><i class="fa fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="margin:0 0 12px 0; font-size:12px; color:#93c5fd;">
+          ⚠️ <strong>1-Click Multi-Template Sync:</strong> Any changes made here will instantly update ALL 55 templates across the entire system!
+        </p>
+        <input type="hidden" id="modalBlockKey">
+        <div class="form-group">
+          <label style="font-size:12px; color:#94a3b8; display:block; margin-bottom:6px;">Block HTML Content</label>
+          <textarea id="modalBlockHtml" style="width:100%; height:260px; background:#252d40; border:1px solid var(--panel-border); color:#fff; padding:12px; border-radius:6px; font-family:monospace; font-size:12px; outline:none;"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button onclick="closeGlobalModal()" class="btn-action btn-ghost">Cancel</button>
+        <button onclick="saveMasterGlobalBlock()" class="btn-action btn-blue"><i class="fa fa-check"></i> Save & Sync All 55 Templates</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP HEADER BAR -->
+  <div id="gb-header">
+    <div class="brand-logo">
+      <div class="dot"><i class="fa fa-globe"></i></div>
+      <span>Global Modular Builder</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <input type="text" id="builder-title" class="title-input" value="<%= template.template_title %>" placeholder="Document Title...">
+    <div class="topbar-sep"></div>
+
+    <!-- ZOOM CONTROLS -->
+    <div style="display:flex; align-items:center; gap:4px; background:#252d40; padding:2px 8px; border-radius:6px; border:1px solid var(--panel-border);">
+      <button onclick="zoomCanvas(-0.05)" class="btn-action btn-ghost" style="padding:2px 6px; font-size:11px;">− Zoom</button>
+      <span id="zoom-text" style="font-size:12px; color:var(--text-light); width:45px; text-align:center;">70%</span>
+      <button onclick="zoomCanvas(0.05)" class="btn-action btn-ghost" style="padding:2px 6px; font-size:11px;">+ Zoom</button>
+      <button onclick="fitCanvas()" class="btn-action btn-blue" style="padding:2px 8px; font-size:11px;">Fit Screen</button>
+    </div>
+
+    <div class="topbar-spacer"></div>
+    <a href="/template/<%= template.template_id %>?domain_id=<%= domain_id %>&token=<%= token %>" class="btn-action btn-ghost">
+      <i class="fa fa-arrow-left"></i> Back to GrapesJS
+    </a>
+    <button onclick="saveGlobalBuilder()" class="btn-action btn-success">
+      <i class="fa fa-floppy-o"></i> Save Proposal
+    </button>
+  </div>
+
+  <!-- WORKSPACE BODY -->
+  <div id="gb-body">
+
+    <!-- LEFT SIDEBAR: DRAG & DROP GLOBAL BLOCKS -->
+    <div id="gb-left-palette">
+      <div class="pane-header">
+        <span>Drag & Drop Global Blocks</span>
+        <i class="fa fa-cubes"></i>
+      </div>
+      <div class="block-list">
+        
+        <!-- GLOBAL BLOCK 1: BANK DETAILS -->
+        <div class="drag-block-card" draggable="true" ondragstart="onDragBlockStart(event, 'bank_details_advisor_zone')">
+          <div class="icon"><i class="fa fa-university"></i></div>
+          <div class="info">
+            <strong>Bank Account Details</strong>
+            <span>Advisor Zone IBAN & Title</span>
+          </div>
+          <span class="global-badge">Global</span>
+        </div>
+
+        <!-- GLOBAL BLOCK 2: IFZA TERMS -->
+        <div class="drag-block-card" draggable="true" ondragstart="onDragBlockStart(event, 'terms_ifza_standard')">
+          <div class="icon"><i class="fa fa-gavel"></i></div>
+          <div class="info">
+            <strong>IFZA Terms & Conditions</strong>
+            <span>Standard IFZA Legal Clause</span>
+          </div>
+          <span class="global-badge">Global</span>
+        </div>
+
+        <!-- GLOBAL BLOCK 3: DED TERMS -->
+        <div class="drag-block-card" draggable="true" ondragstart="onDragBlockStart(event, 'terms_ded_mainland')">
+          <div class="icon"><i class="fa fa-building"></i></div>
+          <div class="info">
+            <strong>DED Mainland Terms</strong>
+            <span>Dubai DED Ejari & Sponsor</span>
+          </div>
+          <span class="global-badge">Global</span>
+        </div>
+
+        <!-- GLOBAL BLOCK 4: SIGNATURES -->
+        <div class="drag-block-card" draggable="true" ondragstart="onDragBlockStart(event, 'signature_block_standard')">
+          <div class="icon"><i class="fa fa-pencil"></i></div>
+          <div class="info">
+            <strong>Signature Sign-Off</strong>
+            <span>Client & Advisor Zone Signatures</span>
+          </div>
+          <span class="global-badge">Global</span>
+        </div>
+
+        <div style="margin-top:20px; padding:12px; background:#181f2e; border-radius:8px; border:1px solid var(--panel-border);">
+          <strong style="font-size:12px; color:#60a5fa; display:block; margin-bottom:6px;">🌐 1-Click Master Edit</strong>
+          <p style="font-size:11px; color:#94a3b8; margin:0 0 10px 0;">
+            Want to update the Bank IBAN or Legal Terms across ALL 55 templates in 1 click?
+          </p>
+          <button onclick="openGlobalEditModal('bank_details_advisor_zone')" class="btn-action btn-blue" style="width:100%; justify-content:center; font-size:11px;">
+            ✏️ Edit Master Bank Details
+          </button>
+          <button onclick="openGlobalEditModal('terms_ifza_standard')" class="btn-action btn-ghost" style="width:100%; justify-content:center; font-size:11px; margin-top:6px;">
+            ✏️ Edit Master IFZA Terms
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CENTER CANVAS: A4 SHEETS -->
+    <div id="gb-center-canvas">
+      <style id="customCssHolder">
+        <%- template.css %>
+      </style>
+
+      <div id="pagesContainer" style="display:flex; flex-direction:column; align-items:center; transform-origin: top center; transition: transform 0.2s ease;">
+        <!-- Pages Auto-Rendered Here -->
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const rawTemplateHtml = `<%- template.template.replace(/`/g, '\\`') %>`;
+    let canvasZoomScale = 0.70;
+    
+    // Global Blocks Content Map passed from backend
+    const globalBlocksMap = <%- JSON.stringify(globalBlocks || {}) %>;
+
+    // ── 1. DRAG & DROP ENGINE ──
+    function onDragBlockStart(event, blockKey) {
+      event.dataTransfer.setData('text/plain', blockKey);
+    }
+
+    function setupCanvasDropZone() {
+      const container = document.getElementById('pagesContainer');
+      
+      container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        container.style.outline = '2px dashed #2563eb';
+      });
+
+      container.addEventListener('dragleave', (e) => {
+        container.style.outline = 'none';
+      });
+
+      container.addEventListener('drop', (e) => {
+        e.preventDefault();
+        container.style.outline = 'none';
+        const blockKey = e.dataTransfer.getData('text/plain');
+        if (blockKey) {
+          dropGlobalBlockOnCanvas(blockKey);
+        }
+      });
+    }
+
+    function dropGlobalBlockOnCanvas(blockKey) {
+      const activeSheet = document.querySelector('.sheet-content');
+      if (!activeSheet) return;
+
+      const blockHtml = globalBlocksMap[blockKey] || `<div>[Global Block: ${blockKey}]</div>`;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'dropped-global-block';
+      wrapper.setAttribute('data-block-key', blockKey);
+      wrapper.innerHTML = `
+        <button class="block-delete-btn" onclick="this.parentElement.remove()"><i class="fa fa-trash"></i></button>
+        ${blockHtml}
+      `;
+
+      activeSheet.appendChild(wrapper);
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Dropped Global Block: ${blockKey}`,
+        showConfirmButton: false,
+        timer: 2000
+      });
+    }
+
+    // ── 2. RENDER TEMPLATE HTML AS EDITABLE A4 SHEETS ──
+    function renderGlobalPages() {
+      const container = document.getElementById('pagesContainer');
+      container.innerHTML = '';
+
+      let pages = rawTemplateHtml.split(/<\/?pagebreak[^>]*>|<!--\s*pagebreak\s*-->/gi)
+                                   .map(p => p.trim())
+                                   .filter(p => p.length > 30);
+
+      if (pages.length === 0) {
+        pages = [rawTemplateHtml];
+      }
+
+      pages.forEach((pageHtml, idx) => {
+        const sheet = document.createElement('div');
+        sheet.className = 'a4-page-sheet';
+        sheet.id = `sheet_page_${idx + 1}`;
+        sheet.innerHTML = `
+          <div class="page-header-tag">Page ${idx + 1} of ${pages.length}</div>
+          <div class="sheet-content canvas-drop-zone" contenteditable="true" style="outline:none; min-height:1080px;">
+            ${pageHtml}
+          </div>
+        `;
+        container.appendChild(sheet);
+      });
+
+      fitCanvas();
+      setupCanvasDropZone();
+    }
+
+    // ── 3. 1-CLICK GLOBAL MASTER EDIT MODAL ──
+    function openGlobalEditModal(blockKey) {
+      const modal = document.getElementById('globalBlockModal');
+      document.getElementById('modalBlockKey').value = blockKey;
+      document.getElementById('modalBlockTitle').textContent = `🌐 Edit Master Global Block: [${blockKey}]`;
+      
+      const content = globalBlocksMap[blockKey] || '';
+      document.getElementById('modalBlockHtml').value = content;
+      modal.style.display = 'flex';
+    }
+
+    function closeGlobalModal() {
+      document.getElementById('globalBlockModal').style.display = 'none';
+    }
+
+    async function saveMasterGlobalBlock() {
+      const blockKey = document.getElementById('modalBlockKey').value;
+      const htmlContent = document.getElementById('modalBlockHtml').value;
+      const domainId = "<%= domain_id %>";
+
+      Swal.fire({
+        title: 'Syncing Master Block...',
+        text: 'Updating block across all 55 templates...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        const response = await fetch('/api/blocks/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            block_slug: blockKey,
+            block_name: blockKey.replace(/_/g, ' ').toUpperCase(),
+            html_content: htmlContent,
+            category: 'Global Shared',
+            domain_id: domainId
+          })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          globalBlocksMap[blockKey] = htmlContent;
+          closeGlobalModal();
+          Swal.fire('Synced!', 'Master Block updated! All 55 templates updated in 1-click.', 'success');
+        } else {
+          Swal.fire('Error', result.error || 'Failed to sync block', 'error');
+        }
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    // ── 4. ZOOM / FIT HELPERS ──
+    function zoomCanvas(delta) {
+      canvasZoomScale = Math.min(1.2, Math.max(0.3, canvasZoomScale + delta));
+      applyZoomScale();
+    }
+
+    function fitCanvas() {
+      const centerPane = document.getElementById('gb-center-canvas');
+      const paneWidth = centerPane.clientWidth - 60;
+      canvasZoomScale = Math.min(0.75, Math.max(0.35, paneWidth / 940));
+      applyZoomScale();
+    }
+
+    function applyZoomScale() {
+      const container = document.getElementById('pagesContainer');
+      if (container) container.style.transform = `scale(${canvasZoomScale})`;
+      const zoomText = document.getElementById('zoom-text');
+      if (zoomText) zoomText.textContent = Math.round(canvasZoomScale * 100) + '%';
+    }
+
+    // ── 5. SAVE PROPOSAL ──
+    async function saveGlobalBuilder() {
+      const title = document.getElementById('builder-title').value;
+      const sheets = document.querySelectorAll('.sheet-content');
+      
+      let compiledHtml = '';
+      sheets.forEach((sheet, idx) => {
+        let pageCode = sheet.innerHTML;
+
+        // Convert dropped global blocks to tokens {{block:xxx}} for clean dynamic server-rendering
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = pageCode;
+        tempDiv.querySelectorAll('.dropped-global-block').forEach(el => {
+          const key = el.getAttribute('data-block-key');
+          if (key) {
+            el.outerHTML = `\n{{block:${key}}}\n`;
+          }
+        });
+
+        compiledHtml += tempDiv.innerHTML;
+        if (idx < sheets.length - 1) compiledHtml += '\n<pagebreak/>\n';
+      });
+
+      const tempid = "<%= template.template_id %>";
+      const domainId = "<%= domain_id %>";
+
+      Swal.fire({
+        title: 'Saving Proposal...',
+        text: 'Saving modular template...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        const response = await fetch('/api/global-builder/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            templateId: tempid,
+            domainId: domainId,
+            title: title,
+            html: compiledHtml
+          })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          Swal.fire('Saved!', 'Proposal saved successfully.', 'success');
+        } else {
+          Swal.fire('Error', result.error || 'Failed to save proposal', 'error');
+        }
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    window.addEventListener('load', () => {
+      renderGlobalPages();
+    });
+  </script>
+</body>
+</html>

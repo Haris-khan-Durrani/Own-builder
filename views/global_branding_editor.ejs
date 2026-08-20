@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Domain Branding Studio</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;600;700&family=Roboto:wght@400;500;700&family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.6/ace.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    :root {
+      --primary-color: <%= domain.brand_primary_color || '#ff4c00' %>;
+      --secondary-color: <%= domain.brand_secondary_color || '#0a2540' %>;
+    }
+    body { background-color: #0b0f19; color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+    
+    .studio-card { background: #182234; border-radius: 12px; border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); }
+    .form-control, .form-select { background-color: #0f172a; border-color: #2e3d56; color: #f8fafc; border-radius: 8px; padding: 10px 14px; font-size: 0.9rem; }
+    .form-control:focus, .form-select:focus { background-color: #0f172a; border-color: #2563eb; color: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.25); }
+    .form-label { font-weight: 600; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 6px; }
+    
+    .nav-pills .nav-link { color: #94a3b8; font-weight: 600; border-radius: 8px; padding: 11px 18px; margin-right: 6px; transition: all 0.2s; font-size: 0.9rem; }
+    .nav-pills .nav-link:hover { color: #f8fafc; background: rgba(255,255,255,0.05); }
+    .nav-pills .nav-link.active { background-color: #2563eb; color: #ffffff; box-shadow: 0 4px 14px rgba(37,99,235,0.4); }
+    
+    /* Live Preview A4 Paper Canvas */
+    .a4-preview-canvas {
+      background: #ffffff;
+      color: #1e293b;
+      width: 100%;
+      min-height: 520px;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.5);
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    
+    .theme-preset-card { cursor: pointer; border: 2px solid #2e3d56; border-radius: 8px; padding: 10px; transition: all 0.2s; background: #0f172a; }
+    .theme-preset-card:hover { border-color: #2563eb; transform: translateY(-2px); }
+    
+    .editor-container { height: 340px; width: 100%; border: 1px solid #2e3d56; border-radius: 8px; overflow: hidden; }
+    
+    .btn-gradient { background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; color: white; font-weight: 600; }
+    .btn-gradient:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); color: white; }
+    .upload-btn { background: #1e293b; border: 1px dashed #3b82f6; color: #60a5fa; cursor: pointer; }
+    .upload-btn:hover { background: #2563eb; color: #fff; border-style: solid; }
+  </style>
+</head>
+<body>
+  <!-- Hidden File Input for Image Uploads -->
+  <input type="file" id="globalFileInput" accept="image/*" class="d-none" onchange="handleFileUpload(event)">
+
+  <div class="container-fluid px-4 py-4">
+    <!-- Top Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary">
+      <div>
+        <h2 class="fw-bold mb-1 text-white"><i class="fa fa-magic text-primary me-2"></i> Global Branding Studio</h2>
+        <p class="mb-0" style="color: #94a3b8;">Domain: <strong class="text-info"><%= domain.domain || ('ID ' + domain_id) %></strong> (<%= domain.company_name || 'Main Company' %>)</p>
+      </div>
+      <div class="d-flex gap-2">
+        <button id="modeToggleBtn" onclick="toggleEditorMode()" class="btn btn-outline-light btn-md me-2">
+          <i class="fa fa-code"></i> Advanced Code Mode
+        </button>
+        <button onclick="saveGlobalBranding()" class="btn btn-gradient btn-lg shadow-lg">
+          <i class="fa fa-check-circle me-1"></i> Save Global Branding
+        </button>
+      </div>
+    </div>
+
+    <!-- Layout Grid: Left Form Controls (6 cols) | Right Live Interactive A4 Canvas (6 cols) -->
+    <div class="row g-4">
+      
+      <!-- LEFT COLUMN: VISUAL BRANDING OPTIONS -->
+      <div class="col-lg-6">
+        
+        <!-- Navigation Pills -->
+        <div class="studio-card p-3 mb-4">
+          <ul class="nav nav-pills" id="studioTabs" role="tablist">
+            <li class="nav-item">
+              <button class="nav-link active" id="brand-tab" data-bs-toggle="tab" data-bs-target="#brand-pane" type="button" onclick="setPreviewTab('cover')">
+                <i class="fa fa-sliders me-1"></i> 1. Brand Identity
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" id="cover-tab" data-bs-toggle="tab" data-bs-target="#cover-pane" type="button" onclick="setPreviewTab('cover')">
+                <i class="fa fa-book me-1"></i> 2. Cover Page
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" id="headerfooter-tab" data-bs-toggle="tab" data-bs-target="#headerfooter-pane" type="button" onclick="setPreviewTab('inner')">
+                <i class="fa fa-window-maximize me-1"></i> 3. Header & Footer
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" id="closing-tab" data-bs-toggle="tab" data-bs-target="#closing-pane" type="button" onclick="setPreviewTab('closing')">
+                <i class="fa fa-flag-checkered me-1"></i> 4. Closing Page
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" id="bank-tab" data-bs-toggle="tab" data-bs-target="#bank-pane" type="button" onclick="setPreviewTab('inner')">
+                <i class="fa fa-university me-1"></i> 5. Bank & Addons
+              </button>
+            </li>
+            <li class="nav-item d-none" id="codeTabItem">
+              <button class="nav-link text-warning" id="code-tab" data-bs-toggle="tab" data-bs-target="#code-pane" type="button">
+                <i class="fa fa-code me-1"></i> Raw Code
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div class="tab-content" id="studioTabContent">
+
+          <!-- TAB 1: BRAND IDENTITY & PALETTE -->
+          <div class="tab-pane fade show active" id="brand-pane">
+            <div class="studio-card p-4 mb-4">
+              <h5 class="fw-bold text-white mb-3"><i class="fa fa-paint-brush text-primary me-2"></i> Quick 1-Click Theme Presets</h5>
+              <div class="row g-2 mb-4">
+                <div class="col-3">
+                  <div class="theme-preset-card text-center" onclick="applyPresetTheme('#ff4c00', '#0a2540', '\'Inter\', sans-serif')">
+                    <div class="d-flex h-100 justify-content-center gap-1 mb-1">
+                      <span style="width:16px;height:16px;background:#ff4c00;border-radius:50%;"></span>
+                      <span style="width:16px;height:16px;background:#0a2540;border-radius:50%;"></span>
+                    </div>
+                    <small class="text-white">EBMS Orange</small>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="theme-preset-card text-center" onclick="applyPresetTheme('#2563eb', '#1e293b', '\'Poppins\', sans-serif')">
+                    <div class="d-flex justify-content-center gap-1 mb-1">
+                      <span style="width:16px;height:16px;background:#2563eb;border-radius:50%;"></span>
+                      <span style="width:16px;height:16px;background:#1e293b;border-radius:50%;"></span>
+                    </div>
+                    <small class="text-white">Corporate Blue</small>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="theme-preset-card text-center" onclick="applyPresetTheme('#059669', '#064e3b', '\'Montserrat\', sans-serif')">
+                    <div class="d-flex justify-content-center gap-1 mb-1">
+                      <span style="width:16px;height:16px;background:#059669;border-radius:50%;"></span>
+                      <span style="width:16px;height:16px;background:#064e3b;border-radius:50%;"></span>
+                    </div>
+                    <small class="text-white">Emerald Green</small>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <div class="theme-preset-card text-center" onclick="applyPresetTheme('#d97706', '#451a03', '\'Roboto\', sans-serif')">
+                    <div class="d-flex justify-content-center gap-1 mb-1">
+                      <span style="width:16px;height:16px;background:#d97706;border-radius:50%;"></span>
+                      <span style="width:16px;height:16px;background:#451a03;border-radius:50%;"></span>
+                    </div>
+                    <small class="text-white">Luxury Gold</small>
+                  </div>
+                </div>
+              </div>
+
+              <h5 class="fw-bold text-white mb-3"><i class="fa fa-id-card text-primary me-2"></i> Company Logo & Colors</h5>
+              
+              <!-- Logo Upload & URL -->
+              <div class="mb-3">
+                <label class="form-label">Company Logo Image</label>
+                <div class="input-group">
+                  <input type="url" class="form-control" id="logoUrlInput" value="<%= domain.logo_url || '' %>" placeholder="https://example.com/logo.png" oninput="updatePreviews()">
+                  <button class="btn upload-btn" type="button" onclick="triggerUpload('logoUrlInput')">
+                    <i class="fa fa-upload me-1"></i> Upload File
+                  </button>
+                </div>
+              </div>
+
+              <!-- Logo Height Slider -->
+              <div class="row g-3 mb-3">
+                <div class="col-6">
+                  <label class="form-label">Logo Display Height (<span id="logoHeightVal">45</span>px)</label>
+                  <input type="range" class="form-range" id="logoHeightInput" min="20" max="90" value="45" oninput="document.getElementById('logoHeightVal').textContent=this.value; updatePreviews();">
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Logo Alignment</label>
+                  <select id="logoAlignInput" class="form-select" onchange="updatePreviews()">
+                    <option value="flex-start">Left Aligned</option>
+                    <option value="center" selected>Center Aligned</option>
+                    <option value="flex-end">Right Aligned</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Colors -->
+              <div class="row g-3 mb-3">
+                <div class="col-6">
+                  <label class="form-label">Primary Brand Color</label>
+                  <div class="d-flex align-items-center gap-2">
+                    <input type="color" class="form-control form-control-color" id="brandPrimaryColor" value="<%= domain.brand_primary_color || '#ff4c00' %>" style="width:45px; height:40px;" oninput="document.getElementById('brandPrimaryColorHex').value=this.value; updatePreviews();">
+                    <input type="text" class="form-control" id="brandPrimaryColorHex" value="<%= domain.brand_primary_color || '#ff4c00' %>" oninput="document.getElementById('brandPrimaryColor').value=this.value; updatePreviews();">
+                  </div>
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Secondary Brand Color</label>
+                  <div class="d-flex align-items-center gap-2">
+                    <input type="color" class="form-control form-control-color" id="brandSecondaryColor" value="<%= domain.brand_secondary_color || '#0a2540' %>" style="width:45px; height:40px;" oninput="document.getElementById('brandSecondaryColorHex').value=this.value; updatePreviews();">
+                    <input type="text" class="form-control" id="brandSecondaryColorHex" value="<%= domain.brand_secondary_color || '#0a2540' %>" oninput="document.getElementById('brandSecondaryColor').value=this.value; updatePreviews();">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Font Family -->
+              <div class="mb-3">
+                <label class="form-label">Global Proposal Font Family</label>
+                <select id="brandFontFamily" class="form-select" onchange="updatePreviews()">
+                  <option value="Arial, sans-serif" <%= (domain.brand_font_family === 'Arial, sans-serif') ? 'selected' : '' %>>Arial / System Default</option>
+                  <option value="'Poppins', sans-serif" <%= (domain.brand_font_family === "'Poppins', sans-serif") ? 'selected' : '' %>>Poppins (Modern)</option>
+                  <option value="'Roboto', sans-serif" <%= (domain.brand_font_family === "'Roboto', sans-serif") ? 'selected' : '' %>>Roboto (Clean Corporate)</option>
+                  <option value="'Montserrat', sans-serif" <%= (domain.brand_font_family === "'Montserrat', sans-serif") ? 'selected' : '' %>>Montserrat (Bold Stylish)</option>
+                  <option value="'Inter', sans-serif" <%= (domain.brand_font_family === "'Inter', sans-serif") ? 'selected' : '' %>>Inter (Sleek Modern)</option>
+                </select>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- TAB 2: COVER PAGE -->
+          <div class="tab-pane fade" id="cover-pane">
+            <div class="studio-card p-4 mb-4">
+              <h5 class="fw-bold text-white mb-3"><i class="fa fa-book text-primary me-2"></i> Master Cover Page (Page 1) Settings</h5>
+
+              <!-- Background Upload / URL -->
+              <div class="mb-3">
+                <label class="form-label">Cover Background Image</label>
+                <div class="input-group">
+                  <input type="url" class="form-control" id="coverBgInput" value="https://pp.ebmsbusiness.com/wp-content/uploads/2022/11/1-724x1024-1.jpg" oninput="updatePreviews()">
+                  <button class="btn upload-btn" type="button" onclick="triggerUpload('coverBgInput')">
+                    <i class="fa fa-upload me-1"></i> Upload Background
+                  </button>
+                </div>
+              </div>
+
+              <!-- Cover Title & Subtitle -->
+              <div class="row g-3 mb-3">
+                <div class="col-6">
+                  <label class="form-label">Proposal Main Title</label>
+                  <input type="text" class="form-control" id="coverTitleInput" value="BUSINESS PROPOSAL" oninput="updatePreviews()">
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Company Subtitle / Tagline</label>
+                  <input type="text" class="form-control" id="coverSubtitleInput" value="Your Success Is Our Business" oninput="updatePreviews()">
+                </div>
+              </div>
+
+              <!-- Dark Overlay Tint Slider -->
+              <div class="mb-3">
+                <label class="form-label">Background Darkening Tint (<span id="coverTintVal">10</span>%)</label>
+                <input type="range" class="form-range" id="coverTintInput" min="0" max="80" value="10" oninput="document.getElementById('coverTintVal').textContent=this.value; updatePreviews();">
+                <small class="text-muted" style="color: #94a3b8 !important;">Darkens background photo so title text stays crystal clear.</small>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- TAB 3: INNER PAGE HEADER & FOOTER -->
+          <div class="tab-pane fade" id="headerfooter-pane">
+            <div class="studio-card p-4 mb-4">
+              <h5 class="fw-bold text-white mb-3"><i class="fa fa-window-maximize text-primary me-2"></i> Master Header & Footer Settings</h5>
+
+              <div class="mb-3">
+                <label class="form-label">Top Header Contact & Office Address</label>
+                <input type="text" class="form-control" id="headerContactInput" value="Visit: www.360bizconsultants.com | Office 1302, City Tower 2, Dubai" oninput="updatePreviews()">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Bottom Footer Notice / Terms</label>
+                <input type="text" class="form-control" id="footerTextInput" value="Official Business Proposal - All Rights Reserved" oninput="updatePreviews()">
+              </div>
+
+              <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="showPageNumSwitch" checked onchange="updatePreviews()">
+                <label class="form-check-label text-white" for="showPageNumSwitch">Show Page Number Indicator in Footer</label>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- TAB 4: CLOSING PAGE -->
+          <div class="tab-pane fade" id="closing-pane">
+            <div class="studio-card p-4 mb-4">
+              <h5 class="fw-bold text-white mb-3"><i class="fa fa-flag-checkered text-primary me-2"></i> Master Closing Page Settings</h5>
+
+              <div class="mb-3">
+                <label class="form-label">Closing Headline</label>
+                <input type="text" class="form-control" id="closingTitleInput" value="Thank You For Your Business" oninput="updatePreviews()">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Closing Subtext / Message</label>
+                <textarea class="form-control" id="closingDescInput" rows="2" oninput="updatePreviews()">For inquiries, please reach out to your sales consultant or visit our office.</textarea>
+              </div>
+
+              <div class="row g-3 mb-3">
+                <div class="col-6">
+                  <label class="form-label">Sales Representative Name</label>
+                  <input type="text" class="form-control" id="closingRepNameInput" value="Sales Department" oninput="updatePreviews()">
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Direct Contact Phone / Email</label>
+                  <input type="text" class="form-control" id="closingRepContactInput" value="+971 4 123 4567 | info@ebms.ae" oninput="updatePreviews()">
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- TAB 5: BANK DETAILS & ADDON ASSETS -->
+          <div class="tab-pane fade" id="bank-pane">
+            <div class="studio-card p-4 mb-4">
+              <h5 class="fw-bold text-white mb-3"><i class="fa fa-university text-primary me-2"></i> Master Bank Account & Addon Assets Settings</h5>
+
+              <div class="mb-3">
+                <label class="form-label">Master Bank Account Title (Banktile)</label>
+                <input type="text" class="form-control" id="bankTitleInput" value="<%= domain.Banktile || '' %>" placeholder="Advisor Zone Business Setup LLC" oninput="updatePreviews()">
+              </div>
+
+              <div class="row g-3 mb-3">
+                <div class="col-6">
+                  <label class="form-label">Bank Account Number</label>
+                  <input type="text" class="form-control" id="accountNumberInput" value="<%= domain.Accountnumber || '' %>" placeholder="1015881271101" oninput="updatePreviews()">
+                </div>
+                <div class="col-6">
+                  <label class="form-label">IBAN Number</label>
+                  <input type="text" class="form-control" id="ibanNumberInput" value="<%= domain.Ibannumber || '' %>" placeholder="AE820260001015881271101" oninput="updatePreviews()">
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Bank Name & Branch</label>
+                <input type="text" class="form-control" id="bankNameInput" value="<%= domain.bank || '' %>" placeholder="Emirates NBD, Dubai Main Branch" oninput="updatePreviews()">
+              </div>
+
+              <hr class="border-secondary my-4">
+
+              <h5 class="fw-bold text-white mb-3"><i class="fa fa-picture-o text-info me-2"></i> Page Background Images & Corporate Addons</h5>
+
+              <div class="mb-3">
+                <label class="form-label">Inner Pages Background Image URL</label>
+                <input type="url" class="form-control" id="innerBgInput" placeholder="https://example.com/inner-bg.jpg" oninput="updatePreviews()">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Closing Page Background Image URL</label>
+                <input type="url" class="form-control" id="closingBgInput" placeholder="https://example.com/closing-bg.jpg" oninput="updatePreviews()">
+              </div>
+
+              <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <label class="form-label mb-0 fw-bold text-info"><i class="fa fa-tags me-1"></i> Custom Labeled Images & Badges</label>
+                  <button type="button" class="btn btn-sm btn-outline-info" onclick="addAdvCustomImageRow()">
+                    <i class="fa fa-plus-circle me-1"></i> Add Custom Image
+                  </button>
+                </div>
+                <small class="text-muted d-block mb-3" style="color: #94a3b8 !important;">Add stamps, seals, logos, signatures or custom badges. Call them anywhere in proposal editor using shortcode: <code>[custom_img:label_name]</code> or CSS <code>var(--custom-img-label_name)</code></small>
+                
+                <div id="advCustomImagesList" class="d-flex flex-column gap-2">
+                  <!-- Dynamic Rows Injected Here -->
+                </div>
+              </div>
+
+              <hr class="border-secondary my-4">
+
+              <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <label class="form-label mb-0 fw-bold text-danger"><i class="fa fa-paint-brush me-1"></i> Custom Labeled Brand Colors</label>
+                  <button type="button" class="btn btn-sm btn-outline-danger" onclick="addAdvCustomColorRow()">
+                    <i class="fa fa-plus-circle me-1"></i> Add Custom Color
+                  </button>
+                </div>
+                <small class="text-muted d-block mb-3" style="color: #94a3b8 !important;">Add custom theme colors (e.g. accent, gold, header_bg). Call them anywhere using shortcode: <code>[custom_color:label_name]</code> or CSS <code>var(--color-label_name)</code></small>
+                
+                <div id="advCustomColorsList" class="d-flex flex-column gap-2">
+                  <!-- Dynamic Color Rows Injected Here -->
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- TAB 5: RAW CODE -->
+          <div class="tab-pane fade" id="code-pane">
+            <div class="studio-card p-4">
+              <h5 class="fw-bold text-warning mb-3"><i class="fa fa-code me-2"></i> Raw HTML & CSS Code Editors</h5>
+              
+              <ul class="nav nav-tabs mb-3 border-secondary" id="codeSubTabs">
+                <li class="nav-item"><button class="nav-link active text-white" data-bs-toggle="tab" data-bs-target="#raw-cover">Cover HTML</button></li>
+                <li class="nav-item"><button class="nav-link text-white" data-bs-toggle="tab" data-bs-target="#raw-inner">Inner Frame HTML</button></li>
+                <li class="nav-item"><button class="nav-link text-white" data-bs-toggle="tab" data-bs-target="#raw-closing">Closing HTML</button></li>
+                <li class="nav-item"><button class="nav-link text-white" data-bs-toggle="tab" data-bs-target="#raw-css">Global CSS</button></li>
+              </ul>
+
+              <div class="tab-content">
+                <div class="tab-pane fade show active" id="raw-cover"><div id="coverEditor" class="editor-container"></div></div>
+                <div class="tab-pane fade" id="raw-inner"><div id="innerEditor" class="editor-container"></div></div>
+                <div class="tab-pane fade" id="raw-closing"><div id="closingEditor" class="editor-container"></div></div>
+                <div class="tab-pane fade" id="raw-css"><div id="cssEditor" class="editor-container"></div></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: LIVE INTERACTIVE A4 PREVIEW CANVAS (6 cols) -->
+      <div class="col-lg-6">
+        <div class="studio-card p-4 position-sticky" style="top: 20px;">
+          
+          <!-- Live Preview Selector Buttons -->
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold text-white mb-0"><i class="fa fa-eye text-primary me-2"></i> Live A4 Canvas Preview</h6>
+            <div class="btn-group btn-group-sm">
+              <button type="button" class="btn btn-outline-light active" id="pvBtnCover" onclick="setPreviewTab('cover')">Page 1 (Cover)</button>
+              <button type="button" class="btn btn-outline-light" id="pvBtnInner" onclick="setPreviewTab('inner')">Inner Page (Header/Footer)</button>
+              <button type="button" class="btn btn-outline-light" id="pvBtnClosing" onclick="setPreviewTab('closing')">Final Page (Closing)</button>
+            </div>
+          </div>
+
+          <!-- A4 Paper Viewport -->
+          <div class="a4-preview-canvas border d-flex flex-column" id="previewCanvas">
+            
+            <!-- VIEW 1: COVER PAGE PREVIEW -->
+            <div id="pvViewCover" class="w-100 h-100 d-flex flex-column justify-content-between p-4" style="background-size: cover; background-position: center; min-height: 520px; position: relative;">
+              <div id="pvCoverOverlay" style="position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.1); z-index: 1;"></div>
+              
+              <div style="position: relative; z-index: 2;" id="pvCoverLogoWrap" class="d-flex justify-content-center">
+                <img id="pvCoverLogo" src="<%= domain.logo_url || 'https://via.placeholder.com/180x60?text=Company+Logo' %>" style="max-height: 45px;">
+              </div>
+
+              <div style="position: relative; z-index: 2;" class="text-center bg-white p-4 rounded shadow-lg my-auto" style="max-width: 85%; margin: 0 auto;">
+                <h3 class="fw-bold mb-1" id="pvCoverTitle" style="color: var(--secondary-color);">BUSINESS PROPOSAL</h3>
+                <div class="my-2" style="height: 3px; background: var(--primary-color); width: 60px; margin: 0 auto;"></div>
+                <p id="pvCoverSubtitle" class="text-muted small mb-0">Your Success Is Our Business</p>
+              </div>
+
+              <div style="position: relative; z-index: 2;" class="text-center text-white-50 small" style="font-size: 11px;">
+                Page 1 Master Cover Frame
+              </div>
+            </div>
+
+            <!-- VIEW 2: INNER PAGE PREVIEW -->
+            <div id="pvViewInner" class="w-100 h-100 d-flex flex-column justify-content-between d-none" style="min-height: 520px; background: #fff;">
+              <div id="pvInnerHeader" class="p-3 text-white d-flex justify-content-between align-items-center" style="background: var(--secondary-color);">
+                <img id="pvInnerLogo" src="<%= domain.logo_url || 'https://via.placeholder.com/120x35?text=Logo' %>" style="max-height: 36px; filter: brightness(0) invert(1);">
+                <div class="small fw-semibold" id="pvHeaderText" style="font-size: 11px;">Visit: www.360bizconsultants.com | Office 1302, City Tower 2, Dubai</div>
+              </div>
+
+              <div class="p-4 text-center text-muted flex-grow-1 d-flex align-items-center justify-content-center">
+                <div>
+                  <i class="fa fa-file-text-o fa-3x mb-2 text-primary opacity-50"></i>
+                  <h6 class="fw-bold text-dark mb-1">Inner Page Content Area</h6>
+                  <p class="small text-secondary">All proposal body pages (Pages 2..N) sit inside this header & footer frame.</p>
+                </div>
+              </div>
+
+              <div id="pvInnerFooter" class="p-2 text-center text-muted small d-flex justify-content-between px-3" style="border-top: 3px solid var(--primary-color); font-size: 11px; background: #f8fafc;">
+                <span id="pvFooterText">Official Business Proposal - All Rights Reserved</span>
+                <span id="pvPageNum">Page 2 of 4</span>
+              </div>
+            </div>
+
+            <!-- VIEW 3: CLOSING PAGE PREVIEW -->
+            <div id="pvViewClosing" class="w-100 h-100 d-flex flex-column justify-content-center align-items-center p-4 d-none" style="min-height: 520px; background: #f8fafc;">
+              <div class="bg-white p-4 rounded shadow border w-100 text-center" style="max-width: 90%;">
+                <h3 id="pvClosingTitle" class="fw-bold mb-3" style="color: var(--primary-color);">Thank You For Your Business</h3>
+                <p id="pvClosingDesc" class="text-muted mb-4">For inquiries, please reach out to your sales consultant or visit our office.</p>
+                <div class="p-3 rounded mb-4 text-start small" style="background: #f1f5f9; border-left: 4px solid var(--primary-color);">
+                  <strong class="d-block text-dark" id="pvRepName">Sales Department</strong>
+                  <span class="text-muted" id="pvRepContact">+971 4 123 4567 | info@ebms.ae</span>
+                </div>
+                <img id="pvClosingLogo" src="<%= domain.logo_url || 'https://via.placeholder.com/140x45?text=Company+Logo' %>" style="max-height: 45px;">
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let coverEditor, innerEditor, closingEditor, cssEditor;
+    let isAdvancedMode = false;
+    let activeUploadTarget = null;
+
+    document.addEventListener("DOMContentLoaded", function() {
+      // Default templates
+      const defaultCover = `<%- (domain.cover_page_html || '').replace(/`/g, '\\`') %>` || `<table class="c11w5" style="width: 795px; height:1098px; margin: 0; padding: 0; background-size: contain; background-image: url('https://pp.ebmsbusiness.com/wp-content/uploads/2022/11/1-724x1024-1.jpg');">
+  <tr>
+    <td valign="top">
+      <div class="global-cover-content-slot">
+        <!-- COVER CONTENT -->
+      </div>
+    </td>
+  </tr>
+</table>`;
+
+      const defaultInner = `<%- (domain.inner_page_html || '').replace(/`/g, '\\`') %>` || `<div class="global-inner-page-wrapper">
+  <div class="global-page-header-banner" style="background: var(--brand-secondary, #0a2540); color: #fff; padding: 12px 20px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+    <div class="header-logo"><img src="<%= domain.logo_url || '' %>" style="max-height: 40px;" /></div>
+    <div class="header-contact">Visit: www.360bizconsultants.com | Office 1302, City Tower 2, Dubai</div>
+  </div>
+  <div class="global-inner-page-content-slot" style="min-height: 900px; padding: 20px;">
+    <!-- INNER PAGE CONTENT SLOT -->
+  </div>
+  <div class="global-page-footer-banner" style="border-top: 2px solid var(--brand-primary, #ff4c00); padding: 8px 20px; font-size: 11px; text-align: center; color: #555;">
+    Official Business Proposal - All Rights Reserved
+  </div>
+</div>`;
+
+      const defaultClosing = `<%- (domain.closing_page_html || '').replace(/`/g, '\\`') %>` || `<div class="global-closing-page-wrapper" style="padding: 40px; text-align: center; background: #f8fafc; border: 1px solid #e2e8f0; margin-top: 30px;">
+  <h3 style="color: var(--brand-primary, #ff4c00);">Thank You For Your Business</h3>
+  <p>For inquiries, please reach out to your sales consultant or visit our office.</p>
+</div>`;
+
+      const defaultCss = `<%- (domain.global_css || '').replace(/`/g, '\\`') %>` || `/* Global Theme CSS Tokens */
+table th {
+  background-color: var(--brand-primary, #ff4c00) !important;
+  color: #ffffff !important;
+}`;
+
+      // Initialize Ace Editors in background
+      coverEditor = ace.edit("coverEditor");
+      coverEditor.setTheme("ace/theme/tomorrow_night");
+      coverEditor.getSession().setMode("ace/mode/html");
+      coverEditor.setValue(defaultCover, -1);
+
+      innerEditor = ace.edit("innerEditor");
+      innerEditor.setTheme("ace/theme/tomorrow_night");
+      innerEditor.getSession().setMode("ace/mode/html");
+      innerEditor.setValue(defaultInner, -1);
+
+      closingEditor = ace.edit("closingEditor");
+      closingEditor.setTheme("ace/theme/tomorrow_night");
+      closingEditor.getSession().setMode("ace/mode/html");
+      closingEditor.setValue(defaultClosing, -1);
+
+      cssEditor = ace.edit("cssEditor");
+      cssEditor.setTheme("ace/theme/tomorrow_night");
+      cssEditor.getSession().setMode("ace/mode/css");
+      cssEditor.setValue(defaultCss, -1);
+
+      updatePreviews();
+    });
+
+    function applyPresetTheme(primary, secondary, font) {
+      document.getElementById('brandPrimaryColorHex').value = primary;
+      document.getElementById('brandPrimaryColor').value = primary;
+      document.getElementById('brandSecondaryColorHex').value = secondary;
+      document.getElementById('brandSecondaryColor').value = secondary;
+      
+      const fontSelect = document.getElementById('brandFontFamily');
+      for (let opt of fontSelect.options) {
+        if (opt.value === font) opt.selected = true;
+      }
+
+      updatePreviews();
+    }
+
+    function triggerUpload(inputId) {
+      activeUploadTarget = inputId;
+      document.getElementById('globalFileInput').click();
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      Swal.fire({
+        title: 'Uploading File...',
+        didOpen: () => Swal.showLoading(),
+        allowOutsideClick: false
+      });
+
+      fetch('/upload-media/<%= domain_id %>', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.url && activeUploadTarget) {
+          document.getElementById(activeUploadTarget).value = data.url;
+          updatePreviews();
+          Swal.fire('Uploaded!', 'File uploaded successfully.', 'success');
+        } else {
+          Swal.fire('Error', data.error || 'Upload failed', 'error');
+        }
+      })
+      .catch(err => Swal.fire('Error', err.message, 'error'));
+    }
+
+    function addAdvCustomImageRow(label = '', url = '') {
+      const container = document.getElementById('advCustomImagesList');
+      if (!container) return;
+      const rowId = 'adv_custom_row_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+      const row = document.createElement('div');
+      row.id = rowId;
+      row.className = 'd-flex gap-2 align-items-center bg-dark p-2 rounded border border-secondary';
+
+      row.innerHTML = `
+        <input type="text" class="form-control form-control-sm adv-custom-label text-info fw-bold" value="${label}" placeholder="Label (e.g. stamp)" style="width: 140px;">
+        <input type="url" class="form-control form-control-sm adv-custom-url" id="input_${rowId}" value="${url}" placeholder="Image URL (https://...)">
+        <button type="button" class="btn btn-sm btn-outline-light" onclick="triggerUpload('input_${rowId}')">
+          <i class="fa fa-upload me-1"></i> Upload
+        </button>
+        <button type="button" class="btn btn-sm btn-danger" onclick="document.getElementById('${rowId}').remove()" title="Delete">
+          <i class="fa fa-trash"></i>
+        </button>
+      `;
+      container.appendChild(row);
+    }
+
+    function getAdvCustomImagesPayload() {
+      const rows = document.querySelectorAll('#advCustomImagesList > div');
+      const list = [];
+      rows.forEach(r => {
+        const labelEl = r.querySelector('.custom-img-label');
+        const urlEl = r.querySelector('.custom-img-url');
+        if (labelEl && urlEl && urlEl.value.trim()) {
+          const label = labelEl.value.trim() || 'addon';
+          list.push({ label: label, url: urlEl.value.trim() });
+        }
+      });
+      return list;
+    }
+
+    function addAdvCustomColorRow(label = '', hex = '#3b82f6') {
+      const container = document.getElementById('advCustomColorsList');
+      if (!container) return;
+      const rowId = 'adv_custom_color_row_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+      const row = document.createElement('div');
+      row.id = rowId;
+      row.className = 'row g-2 align-items-center bg-dark p-2 rounded border border-secondary';
+
+      row.innerHTML = `
+        <div class="col-4">
+          <input type="text" class="form-control form-control-sm custom-color-label" value="${label}" placeholder="Label (e.g. accent)" style="background:#1e293b; color:#f43f5e; font-weight:600;">
+        </div>
+        <div class="col-2">
+          <input type="color" class="form-control form-control-color w-100" value="${hex}" onchange="this.parentElement.nextElementSibling.querySelector('input').value = this.value">
+        </div>
+        <div class="col-3">
+          <input type="text" class="form-control form-control-sm custom-color-hex" value="${hex}" onchange="this.parentElement.previousElementSibling.querySelector('input').value = this.value">
+        </div>
+        <div class="col-2">
+          <small class="text-muted font-monospace" style="font-size:10px;">[custom_color:${label || 'label'}]</small>
+        </div>
+        <div class="col-1 text-end">
+          <button type="button" class="btn btn-sm btn-outline-danger" onclick="document.getElementById('${rowId}').remove()" title="Delete">
+            <i class="fa fa-trash"></i>
+          </button>
+        </div>
+      `;
+      container.appendChild(row);
+    }
+
+    function getAdvCustomColorsPayload() {
+      const rows = document.querySelectorAll('#advCustomColorsList > div');
+      const list = [];
+      rows.forEach(r => {
+        const labelEl = r.querySelector('.custom-color-label');
+        const hexEl = r.querySelector('.custom-color-hex');
+        if (labelEl && hexEl) {
+          const l = labelEl.value.trim();
+          const h = hexEl.value.trim();
+          if (l && h) list.push({ label: l, hex: h });
+        }
+      });
+      return list;
+    }
+
+    async function initGlobalBrandingSettings() {
+      const domainId = "<%= domain_id %>";
+      try {
+        const res = await fetch(`/api/global-branding-settings/${domainId}`);
+        if (res.ok) {
+          const s = await res.json();
+          if (s.company_logo && document.getElementById('logoUrlInput')) document.getElementById('logoUrlInput').value = s.company_logo;
+          if (s.primary_color) {
+            if (document.getElementById('brandPrimaryColor')) document.getElementById('brandPrimaryColor').value = s.primary_color;
+            if (document.getElementById('brandPrimaryColorHex')) document.getElementById('brandPrimaryColorHex').value = s.primary_color;
+          }
+          if (s.secondary_color) {
+            if (document.getElementById('brandSecondaryColor')) document.getElementById('brandSecondaryColor').value = s.secondary_color;
+            if (document.getElementById('brandSecondaryColorHex')) document.getElementById('brandSecondaryColorHex').value = s.secondary_color;
+          }
+          if (s.font_family && document.getElementById('brandFontFamily')) document.getElementById('brandFontFamily').value = s.font_family;
+          if (s.cover_bg_image && document.getElementById('coverBgInput')) document.getElementById('coverBgInput').value = s.cover_bg_image;
+          if (s.inner_bg_image && document.getElementById('innerBgInput')) document.getElementById('innerBgInput').value = s.inner_bg_image;
+          if (s.closing_bg_image && document.getElementById('closingBgInput')) document.getElementById('closingBgInput').value = s.closing_bg_image;
+          
+          const container = document.getElementById('advCustomImagesList');
+          if (container) container.innerHTML = '';
+
+          if (s.addon_images) {
+            try {
+              const arr = typeof s.addon_images === 'string' ? JSON.parse(s.addon_images) : s.addon_images;
+              if (Array.isArray(arr) && arr.length > 0) {
+                arr.forEach(item => {
+                  if (typeof item === 'object' && item !== null) {
+                    addAdvCustomImageRow(item.label || '', item.url || '');
+                  } else if (typeof item === 'string') {
+                    addAdvCustomImageRow('badge', item);
+                  }
+                });
+              } else {
+                addAdvCustomImageRow('stamp', '');
+              }
+            } catch(e) {
+              addAdvCustomImageRow('stamp', '');
+            }
+          } else {
+            addAdvCustomImageRow('stamp', '');
+          }
+
+          const colorsContainer = document.getElementById('advCustomColorsList');
+          if (colorsContainer) colorsContainer.innerHTML = '';
+          if (s.custom_colors) {
+            try {
+              const colorArr = typeof s.custom_colors === 'string' ? JSON.parse(s.custom_colors) : s.custom_colors;
+              if (Array.isArray(colorArr) && colorArr.length > 0) {
+                colorArr.forEach(item => {
+                  if (item && item.label && item.hex) addAdvCustomColorRow(item.label, item.hex);
+                });
+              } else {
+                addAdvCustomColorRow('accent', '#f59e0b');
+              }
+            } catch(e) {
+              addAdvCustomColorRow('accent', '#f59e0b');
+            }
+          } else {
+            addAdvCustomColorRow('accent', '#f59e0b');
+          }
+
+          if (s.bank_title && document.getElementById('bankTitleInput')) document.getElementById('bankTitleInput').value = s.bank_title;
+          if (s.account_number && document.getElementById('accountNumberInput')) document.getElementById('accountNumberInput').value = s.account_number;
+          if (s.iban_number && document.getElementById('ibanNumberInput')) document.getElementById('ibanNumberInput').value = s.iban_number;
+          if (s.bank_name && document.getElementById('bankNameInput')) document.getElementById('bankNameInput').value = s.bank_name;
+          updatePreviews();
+        }
+      } catch (err) {
+        console.error("Error auto-loading global branding settings:", err);
+      }
+    }
+
+    function toggleEditorMode() {
+      isAdvancedMode = !isAdvancedMode;
+      const codeTabItem = document.getElementById('codeTabItem');
+      const btn = document.getElementById('modeToggleBtn');
+
+      if (isAdvancedMode) {
+        codeTabItem.classList.remove('d-none');
+        btn.classList.replace('btn-outline-light', 'btn-warning');
+        btn.innerHTML = `<i class="fa fa-sliders"></i> Switch to Visual Studio`;
+        document.getElementById('code-tab').click();
+      } else {
+        codeTabItem.classList.add('d-none');
+        btn.classList.replace('btn-warning', 'btn-outline-light');
+        btn.innerHTML = `<i class="fa fa-code"></i> Advanced Code Mode`;
+        document.getElementById('brand-tab').click();
+      }
+    }
+
+    async function saveGlobalBranding() {
+      const domainId = "<%= domain_id %>";
+      const token = "<%= token %>";
+      const logoUrl = document.getElementById('logoUrlInput').value;
+      const primaryColor = document.getElementById('brandPrimaryColorHex').value;
+      const secondaryColor = document.getElementById('brandSecondaryColorHex').value;
+      const fontFamily = document.getElementById('brandFontFamily').value;
+      
+      const coverBg = document.getElementById('coverBgInput') ? document.getElementById('coverBgInput').value : '';
+      const innerBg = document.getElementById('innerBgInput') ? document.getElementById('innerBgInput').value : '';
+      const closingBg = document.getElementById('closingBgInput') ? document.getElementById('closingBgInput').value : '';
+      const addonImages = getAdvCustomImagesPayload();
+      const customColors = getAdvCustomColorsPayload();
+
+      const bankTile = document.getElementById('bankTitleInput') ? document.getElementById('bankTitleInput').value : '';
+      const accountNumber = document.getElementById('accountNumberInput') ? document.getElementById('accountNumberInput').value : '';
+      const ibanNumber = document.getElementById('ibanNumberInput') ? document.getElementById('ibanNumberInput').value : '';
+      const bankName = document.getElementById('bankNameInput') ? document.getElementById('bankNameInput').value : '';
+
+      Swal.fire({
+        title: 'Saving Global Branding & Settings...',
+        text: 'Applying changes across all templates under this domain...',
+        didOpen: () => Swal.showLoading(),
+        allowOutsideClick: false
+      });
+
+      try {
+        await fetch('/api/global-branding-settings/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            domain_id: domainId,
+            company_logo: logoUrl,
+            cover_bg_image: coverBg,
+            inner_bg_image: innerBg,
+            closing_bg_image: closingBg,
+            addon_images: addonImages,
+            custom_colors: customColors,
+            primary_color: primaryColor,
+            secondary_color: secondaryColor,
+            font_family: fontFamily,
+            bank_title: bankTile,
+            account_number: accountNumber,
+            iban_number: ibanNumber,
+            bank_name: bankName
+          })
+        });
+      } catch (err) {
+         console.error('Error saving global branding settings:', err);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initGlobalBrandingSettings();
+    });
+
+    function setPreviewTab(tab) {
+      document.getElementById('pvViewCover').classList.add('d-none');
+      document.getElementById('pvViewInner').classList.add('d-none');
+      document.getElementById('pvViewClosing').classList.add('d-none');
+      
+      document.getElementById('pvBtnCover').classList.remove('active');
+      document.getElementById('pvBtnInner').classList.remove('active');
+      document.getElementById('pvBtnClosing').classList.remove('active');
+
+      if (tab === 'cover') {
+        document.getElementById('pvViewCover').classList.remove('d-none');
+        document.getElementById('pvBtnCover').classList.add('active');
+      } else if (tab === 'inner') {
+        document.getElementById('pvViewInner').classList.remove('d-none');
+        document.getElementById('pvBtnInner').classList.add('active');
+      } else if (tab === 'closing') {
+        document.getElementById('pvViewClosing').classList.remove('d-none');
+        document.getElementById('pvBtnClosing').classList.add('active');
+      }
+    }
+
+    function updatePreviews() {
+      const primary = document.getElementById('brandPrimaryColorHex').value || '#ff4c00';
+      const secondary = document.getElementById('brandSecondaryColorHex').value || '#0a2540';
+      const logoUrl = document.getElementById('logoUrlInput').value;
+      const logoHeight = document.getElementById('logoHeightInput').value;
+      const logoAlign = document.getElementById('logoAlignInput').value;
+
+      const coverBg = document.getElementById('coverBgInput').value;
+      const coverTitle = document.getElementById('coverTitleInput').value;
+      const coverSubtitle = document.getElementById('coverSubtitleInput').value;
+      const coverTint = document.getElementById('coverTintInput').value;
+
+      const headerText = document.getElementById('headerContactInput').value;
+      const footerText = document.getElementById('footerTextInput').value;
+      const showPageNum = document.getElementById('showPageNumSwitch').checked;
+
+      const closingTitle = document.getElementById('closingTitleInput').value;
+      const closingDesc = document.getElementById('closingDescInput').value;
+      const repName = document.getElementById('closingRepNameInput').value;
+      const repContact = document.getElementById('closingRepContactInput').value;
+
+      document.documentElement.style.setProperty('--primary-color', primary);
+      document.documentElement.style.setProperty('--secondary-color', secondary);
+
+      // Cover preview updates
+      document.getElementById('pvViewCover').style.backgroundImage = `url('${coverBg}')`;
+      document.getElementById('pvCoverOverlay').style.background = `rgba(0,0,0,${coverTint / 100})`;
+      document.getElementById('pvCoverTitle').textContent = coverTitle;
+      document.getElementById('pvCoverSubtitle').textContent = coverSubtitle;
+      document.getElementById('pvCoverLogoWrap').style.justifyContent = logoAlign;
+
+      if (logoUrl) {
+        document.getElementById('pvCoverLogo').src = logoUrl;
+        document.getElementById('pvCoverLogo').style.maxHeight = logoHeight + 'px';
+        document.getElementById('pvInnerLogo').src = logoUrl;
+        document.getElementById('pvInnerLogo').style.maxHeight = logoHeight + 'px';
+        document.getElementById('pvClosingLogo').src = logoUrl;
+        document.getElementById('pvClosingLogo').style.maxHeight = logoHeight + 'px';
+      }
+
+      // Inner Frame preview updates
+      document.getElementById('pvHeaderText').textContent = headerText;
+      document.getElementById('pvFooterText').textContent = footerText;
+      document.getElementById('pvPageNum').style.display = showPageNum ? 'inline' : 'none';
+
+      // Closing preview updates
+      document.getElementById('pvClosingTitle').textContent = closingTitle;
+      document.getElementById('pvClosingDesc').textContent = closingDesc;
+      document.getElementById('pvRepName').textContent = repName;
+      document.getElementById('pvRepContact').textContent = repContact;
+
+      // Auto-generate HTML strings for template injection
+      if (!isAdvancedMode) {
+        const generatedCover = `<table class="c11w5" style="width: 795px; height:1098px; margin: 0; padding: 0; background-size: contain; background-image: url('${coverBg}'); position: relative;">
+  <tr>
+    <td valign="top" style="background: rgba(0,0,0,${coverTint / 100});">
+      <div style="display: flex; justify-content: ${logoAlign}; padding: 20px;">
+        ${logoUrl ? `<img src="${logoUrl}" style="max-height: ${logoHeight}px;" />` : ''}
+      </div>
+      <div class="global-cover-content-slot" style="text-align: center; padding: 40px 20px;">
+        <h1 style="color: ${secondary}; font-weight: bold; margin-bottom: 10px;">${coverTitle}</h1>
+        <p style="color: #666;">${coverSubtitle}</p>
+        <!-- COVER CONTENT -->
+      </div>
+    </td>
+  </tr>
+</table>`;
+
+        const generatedInner = `<div class="global-inner-page-wrapper">
+  <div class="global-page-header-banner" style="background: var(--brand-secondary, ${secondary}); color: #fff; padding: 12px 20px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+    <div class="header-logo"><img src="${logoUrl}" style="max-height: ${logoHeight}px;" /></div>
+    <div class="header-contact">${headerText}</div>
+  </div>
+  <div class="global-inner-page-content-slot" style="min-height: 900px; padding: 20px;">
+    <!-- INNER PAGE CONTENT SLOT -->
+  </div>
+  <div class="global-page-footer-banner" style="border-top: 2px solid var(--brand-primary, ${primary}); padding: 8px 20px; font-size: 11px; display: flex; justify-content: space-between; align-items: center; color: #555;">
+    <span>${footerText}</span>
+    ${showPageNum ? `<span>Page 1 of 1</span>` : ''}
+  </div>
+</div>`;
+
+        const generatedClosing = `<div class="global-closing-page-wrapper" style="padding: 40px; text-align: center; background: #f8fafc; border: 1px solid #e2e8f0; margin-top: 30px; border-radius: 8px;">
+  <h3 style="color: var(--brand-primary, ${primary}); font-weight: bold; margin-bottom: 10px;">${closingTitle}</h3>
+  <p style="color: #555; margin-bottom: 20px;">${closingDesc}</p>
+  <div style="background: #ffffff; border-left: 4px solid ${primary}; padding: 15px; text-align: left; max-width: 450px; margin: 0 auto 20px auto; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+    <strong style="display:block; color: #1e293b;">${repName}</strong>
+    <span style="color: #64748b; font-size: 13px;">${repContact}</span>
+  </div>
+  ${logoUrl ? `<img src="${logoUrl}" style="max-height: ${logoHeight}px;" />` : ''}
+</div>`;
+
+        if (coverEditor) coverEditor.setValue(generatedCover, -1);
+        if (innerEditor) innerEditor.setValue(generatedInner, -1);
+        if (closingEditor) closingEditor.setValue(generatedClosing, -1);
+      }
+    }
+
+    function toggleEditorMode() {
+      isAdvancedMode = !isAdvancedMode;
+      const codeTabItem = document.getElementById('codeTabItem');
+      const btn = document.getElementById('modeToggleBtn');
+
+      if (isAdvancedMode) {
+        codeTabItem.classList.remove('d-none');
+        btn.classList.replace('btn-outline-light', 'btn-warning');
+        btn.innerHTML = `<i class="fa fa-sliders"></i> Switch to Visual Studio`;
+        document.getElementById('code-tab').click();
+      } else {
+        codeTabItem.classList.add('d-none');
+        btn.classList.replace('btn-warning', 'btn-outline-light');
+        btn.innerHTML = `<i class="fa fa-code"></i> Advanced Code Mode`;
+        document.getElementById('brand-tab').click();
+      }
+    }
+
+    async function saveGlobalBranding() {
+      const domainId = "<%= domain_id %>";
+      const token = "<%= token %>";
+      const logoUrl = document.getElementById('logoUrlInput').value;
+      const primaryColor = document.getElementById('brandPrimaryColorHex').value;
+      const secondaryColor = document.getElementById('brandSecondaryColorHex').value;
+      const fontFamily = document.getElementById('brandFontFamily').value;
+      
+      const coverBg = document.getElementById('coverBgInput') ? document.getElementById('coverBgInput').value : '';
+      const innerBg = document.getElementById('innerBgInput') ? document.getElementById('innerBgInput').value : '';
+      const closingBg = document.getElementById('closingBgInput') ? document.getElementById('closingBgInput').value : '';
+      const addonImages = getAdvCustomImagesPayload();
+
+      const bankTile = document.getElementById('bankTitleInput') ? document.getElementById('bankTitleInput').value : '';
+      const accountNumber = document.getElementById('accountNumberInput') ? document.getElementById('accountNumberInput').value : '';
+      const ibanNumber = document.getElementById('ibanNumberInput') ? document.getElementById('ibanNumberInput').value : '';
+      const bankName = document.getElementById('bankNameInput') ? document.getElementById('bankNameInput').value : '';
+
+      Swal.fire({
+        title: 'Saving Global Branding & Settings...',
+        text: 'Applying changes across all templates under this domain...',
+        didOpen: () => Swal.showLoading(),
+        allowOutsideClick: false
+      });
+
+      try {
+        await fetch('/api/global-branding-settings/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            domain_id: domainId,
+            company_logo: logoUrl,
+            cover_bg_image: coverBg,
+            inner_bg_image: innerBg,
+            closing_bg_image: closingBg,
+            addon_images: addonImages,
+            primary_color: primaryColor,
+            secondary_color: secondaryColor,
+            font_family: fontFamily,
+            bank_title: bankTile,
+            account_number: accountNumber,
+            iban_number: ibanNumber,
+            bank_name: bankName
+          })
+        });
+
+        const response = await fetch('/save-global-branding', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            domain_id: domainId,
+            token: token,
+            logo_url: logoUrl,
+            brand_primary_color: primaryColor,
+            brand_secondary_color: secondaryColor,
+            brand_font_family: fontFamily,
+            cover_page_html: coverEditor ? coverEditor.getValue() : '',
+            inner_page_html: innerEditor ? innerEditor.getValue() : '',
+            closing_page_html: closingEditor ? closingEditor.getValue() : '',
+            global_css: cssEditor ? cssEditor.getValue() : ''
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          Swal.fire('Saved!', 'Global domain branding & settings saved successfully to global_branding_settings table!', 'success');
+        } else {
+          Swal.fire('Error', data.error || 'Failed to save branding', 'error');
+        }
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

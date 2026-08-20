@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Easy Builder (pdfme) · <%= template.template_title %></title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <!-- PDFME & PDF-LIB CDN MODULES -->
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://unpkg.com/@pdfme/generator@6.1.12/dist/index.js"></script>
+  <script src="https://unpkg.com/@pdfme/ui@6.1.12/dist/index.js"></script>
+  
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --brand-primary: <%= domain.brand_primary_color || '#ff4c00' %>;
+      --brand-secondary: <%= domain.brand_secondary_color || '#0a2540' %>;
+      --brand-font: 'Inter', sans-serif;
+      --bg-dark: #0f172a;
+      --panel-bg: #1e2433;
+      --panel-border: rgba(255,255,255,0.1);
+      --text-light: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+    body {
+      margin: 0; padding: 0;
+      font-family: var(--brand-font);
+      background: var(--bg-dark);
+      color: var(--text-light);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* TOPBAR */
+    #pdfme-header {
+      height: 56px;
+      background: #181f2e;
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      z-index: 100;
+    }
+    .brand-logo {
+      display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; color: #fff;
+    }
+    .brand-logo .dot {
+      width: 28px; height: 28px; background: #10b981; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;
+    }
+    .topbar-sep { width: 1px; height: 24px; background: var(--panel-border); }
+    .title-input {
+      background: #252d40; border: 1px solid var(--panel-border); color: #fff;
+      padding: 6px 12px; border-radius: 6px; font-size: 13px; outline: none; width: 240px;
+    }
+    .title-input:focus { border-color: #10b981; }
+    .topbar-spacer { flex: 1; }
+    .btn-action {
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px;
+      border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+      transition: all 0.15s ease; text-decoration: none; white-space: nowrap;
+    }
+    .btn-emerald { background: #10b981; color: #fff; }
+    .btn-emerald:hover { background: #059669; }
+    .btn-purple { background: #8b5cf6; color: #fff; }
+    .btn-purple:hover { background: #7c3aed; }
+    .btn-ghost { background: #2e3a54; color: var(--text-light); border: 1px solid var(--panel-border); }
+    .btn-ghost:hover { background: #3b4968; }
+
+    /* WORKSPACE */
+    #pdfme-body {
+      flex: 1; display: flex; overflow: hidden;
+    }
+
+    /* CENTER CANVAS CONTAINER */
+    #pdfme-canvas-container {
+      flex: 1; background: #090d16; padding: 24px; overflow-y: auto;
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    }
+
+    /* PDFME CONTAINER ELEMENT */
+    #pdfme-container {
+      width: 800px;
+      min-height: 1050px;
+      background: #ffffff;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+      border-radius: 4px;
+      margin-bottom: 30px;
+      overflow: hidden;
+    }
+
+    /* RIGHT FORM CONTROL PANEL */
+    #right-form-panel {
+      width: 380px; background: var(--panel-bg); border-left: 1px solid var(--panel-border);
+      display: flex; flex-direction: column;
+    }
+    .pane-header {
+      padding: 14px 16px; font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--text-muted); border-bottom: 1px solid var(--panel-border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .form-scroll-body {
+      flex: 1; overflow-y: auto; padding: 16px;
+    }
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px;
+    }
+    .form-group label code {
+      background: rgba(16,185,129,0.2); color: #6ee7b7; padding: 2px 5px; border-radius: 4px; font-size: 10px;
+    }
+    .form-control {
+      width: 100%; background: #252d40; border: 1px solid var(--panel-border);
+      color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none;
+      font-family: inherit;
+    }
+    .form-control:focus { border-color: #10b981; }
+
+    /* MODE TOGGLE BANNER */
+    .mode-banner {
+      display: flex; gap: 10px; align-items: center; background: #1e2433;
+      padding: 8px 16px; border-radius: 8px; border: 1px solid var(--panel-border);
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER BAR -->
+  <div id="pdfme-header">
+    <div class="brand-logo">
+      <div class="dot"><i class="fa fa-file-pdf-o"></i></div>
+      <span>pdfme Easy Builder</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <input type="text" id="template-title" class="title-input" value="<%= template.template_title %>" placeholder="Document Title...">
+    <div class="topbar-spacer"></div>
+
+    <a href="/template/<%= template.template_id %>?domain_id=<%= domain_id %>&token=<%= token %>" class="btn-action btn-ghost">
+      <i class="fa fa-arrow-left"></i> Back to GrapesJS
+    </a>
+    <button onclick="downloadPdfmeDocument()" class="btn-action btn-purple">
+      <i class="fa fa-download"></i> 1-Click Vector PDF
+    </button>
+    <button onclick="savePdfmeTemplate()" class="btn-action btn-emerald">
+      <i class="fa fa-floppy-o"></i> Save Proposal
+    </button>
+  </div>
+
+  <!-- MAIN WORKSPACE -->
+  <div id="pdfme-body">
+
+    <!-- CENTER CANVAS FOR PDFME PREVIEW / DESIGNER -->
+    <div id="pdfme-canvas-container">
+      <div class="mode-banner">
+        <span style="font-size:12px; color:#94a3b8; font-weight:600;">Editor Mode:</span>
+        <button id="btn-mode-form" onclick="switchPdfmeMode('form')" class="btn-action btn-emerald" style="padding:4px 10px; font-size:12px;">
+          📝 Form Mode (Sales Staff)
+        </button>
+        <button id="btn-mode-designer" onclick="switchPdfmeMode('designer')" class="btn-action btn-ghost" style="padding:4px 10px; font-size:12px;">
+          🎨 Visual Designer (Admin)
+        </button>
+      </div>
+
+      <!-- CANVAS MOUNT ELEMENT -->
+      <div id="pdfme-container"></div>
+    </div>
+
+    <!-- RIGHT FORM PANEL (SALES STAFF EASY INPUTS) -->
+    <div id="right-form-panel">
+      <div class="pane-header">
+        <span>Sales Proposal Inputs</span>
+        <i class="fa fa-sliders"></i>
+      </div>
+      <div class="form-scroll-body">
+        <p style="font-size:12px; color:var(--text-muted); margin:0 0 14px 0;">
+          Fill out the fields below. The vector PDF preview updates live on screen instantly!
+        </p>
+
+        <div class="form-group">
+          <label>Proposal Title <code>[title]</code></label>
+          <input type="text" class="form-control" id="in_title" value="<%= template.template_title %>" oninput="updatePdfmeLiveInputs()">
+        </div>
+        <div class="form-group">
+          <label>Client Name <code>[cname]</code></label>
+          <input type="text" class="form-control" id="in_cname" value="John Doe" oninput="updatePdfmeLiveInputs()">
+        </div>
+        <div class="form-group">
+          <label>Client Email <code>[cemail]</code></label>
+          <input type="text" class="form-control" id="in_cemail" value="john@acme.com" oninput="updatePdfmeLiveInputs()">
+        </div>
+        <div class="form-group">
+          <label>Company Name <code>[companyname]</code></label>
+          <input type="text" class="form-control" id="in_companyname" value="Acme Enterprises" oninput="updatePdfmeLiveInputs()">
+        </div>
+        <div style="display:flex; gap:8px;">
+          <div class="form-group" style="flex:1;">
+            <label>Day <code>[pdte]</code></label>
+            <input type="text" class="form-control" id="in_pdte" value="16" oninput="updatePdfmeLiveInputs()">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>Month <code>[pmonth]</code></label>
+            <input type="text" class="form-control" id="in_pmonth" value="August" oninput="updatePdfmeLiveInputs()">
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>Year <code>[pyear]</code></label>
+            <input type="text" class="form-control" id="in_pyear" value="2026" oninput="updatePdfmeLiveInputs()">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>License Package <code>[normalpackage]</code></label>
+          <input type="text" class="form-control" id="in_normalpackage" value="Commercial License Standard" oninput="updatePdfmeLiveInputs()">
+        </div>
+        <div class="form-group">
+          <label>License Price <code>[price]</code></label>
+          <input type="text" class="form-control" id="in_price" value="15,000 AED" oninput="updatePdfmeLiveInputs()">
+        </div>
+        <div class="form-group">
+          <label>Renewal Amount <code>[renewal_amount]</code></label>
+          <input type="text" class="form-control" id="in_renewal_amount" value="12,500 AED" oninput="updatePdfmeLiveInputs()">
+        </div>
+        <div class="form-group">
+          <label>Bank Account Title <code>[Banktile]</code></label>
+          <input type="text" class="form-control" id="in_Banktile" value="Advisor Zone Business Setup LLC" oninput="updatePdfmeLiveInputs()">
+        </div>
+        <div class="form-group">
+          <label>IBAN Number <code>[Ibannumber]</code></label>
+          <input type="text" class="form-control" id="in_Ibannumber" value="AE0303300001029384756001" oninput="updatePdfmeLiveInputs()">
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentPdfmeMode = 'form';
+    let pdfmeInstance = null;
+
+    // Standard A4 PDF Template Schema (pdfme format)
+    const basePdfTemplate = {
+      basePdf: {
+        width: 210,
+        height: 297,
+        padding: [15, 15, 15, 15]
+      },
+      schemas: [
+        [
+          {
+            name: 'header_title',
+            type: 'text',
+            position: { x: 20, y: 20 },
+            width: 170,
+            height: 12,
+            fontSize: 20,
+            fontColor: '#0a2540',
+            fontWeight: 'bold',
+            alignment: 'left'
+          },
+          {
+            name: 'date_line',
+            type: 'text',
+            position: { x: 20, y: 35 },
+            width: 170,
+            height: 8,
+            fontSize: 11,
+            fontColor: '#64748b',
+            alignment: 'left'
+          },
+          {
+            name: 'client_box',
+            type: 'text',
+            position: { x: 20, y: 48 },
+            width: 170,
+            height: 25,
+            fontSize: 12,
+            fontColor: '#1e293b',
+            backgroundColor: '#f8fafc',
+            borderColor: '#cbd5e1',
+            borderWidth: 1,
+            alignment: 'left'
+          },
+          {
+            name: 'pricing_title',
+            type: 'text',
+            position: { x: 20, y: 80 },
+            width: 170,
+            height: 8,
+            fontSize: 14,
+            fontColor: '#0a2540',
+            fontWeight: 'bold'
+          },
+          {
+            name: 'pricing_details',
+            type: 'text',
+            position: { x: 20, y: 92 },
+            width: 170,
+            height: 35,
+            fontSize: 12,
+            fontColor: '#334155',
+            backgroundColor: '#ffffff',
+            borderColor: '#e2e8f0',
+            borderWidth: 1
+          },
+          {
+            name: 'terms_box',
+            type: 'text',
+            position: { x: 20, y: 135 },
+            width: 170,
+            height: 30,
+            fontSize: 11,
+            fontColor: '#475569',
+            backgroundColor: '#f8fafc',
+            borderColor: '#cbd5e1',
+            borderWidth: 1
+          },
+          {
+            name: 'bank_box',
+            type: 'text',
+            position: { x: 20, y: 175 },
+            width: 170,
+            height: 30,
+            fontSize: 11,
+            fontColor: '#1e293b',
+            backgroundColor: '#f1f5f9',
+            borderColor: '#0a2540',
+            borderWidth: 1
+          }
+        ]
+      ]
+    };
+
+    function getPdfmeInputData() {
+      const title = document.getElementById('in_title').value;
+      const cname = document.getElementById('in_cname').value;
+      const cemail = document.getElementById('in_cemail').value;
+      const company = document.getElementById('in_companyname').value;
+      const pdte = document.getElementById('in_pdte').value;
+      const pmonth = document.getElementById('in_pmonth').value;
+      const pyear = document.getElementById('in_pyear').value;
+      const pkg = document.getElementById('in_normalpackage').value;
+      const price = document.getElementById('in_price').value;
+      const renewal = document.getElementById('in_renewal_amount').value;
+      const bankTitle = document.getElementById('in_Banktile').value;
+      const iban = document.getElementById('in_Ibannumber').value;
+
+      return [{
+        header_title: title.toUpperCase(),
+        date_line: `Official Proposal Date: ${pdte} ${pmonth} ${pyear}`,
+        client_box: `CLIENT DETAILS:\nClient Name: ${cname}\nEmail: ${cemail}\nCompany: ${company}`,
+        pricing_title: 'FEE STRUCTURE & BREAKDOWN',
+        pricing_details: `Package Selected: ${pkg}\nFirst Year License Price: ${price}\nYearly Renewal Amount: ${renewal}`,
+        terms_box: `TERMS & CONDITIONS:\n• Medical Center & Emirates ID fees apply separately.\n• Validity: 14 business days from proposal date.`,
+        bank_box: `BANK PAYMENT DETAILS:\nAccount Title: ${bankTitle}\nIBAN Number: ${iban}\nBank: Emirates NBD, Dubai Main Branch`
+      }];
+    }
+
+    function initPdfmeEngine() {
+      const domContainer = document.getElementById('pdfme-container');
+      domContainer.innerHTML = '';
+
+      if (window.pdfme && window.pdfme.UI) {
+        const inputs = getPdfmeInputData();
+        pdfmeInstance = new window.pdfme.UI.Viewer({
+          domContainer: domContainer,
+          template: basePdfTemplate,
+          inputs: inputs
+        });
+      } else {
+        // Fallback Vector HTML A4 Renderer if UNPKG CDN is loading
+        renderVectorHtmlCanvas();
+      }
+    }
+
+    function renderVectorHtmlCanvas() {
+      const domContainer = document.getElementById('pdfme-container');
+      const inputs = getPdfmeInputData()[0];
+
+      domContainer.innerHTML = `
+        <div style="padding:40px; font-family:'Inter', sans-serif; color:#1e293b;">
+          <h1 style="color:#0a2540; margin:0 0 6px 0; font-size:24px;">${inputs.header_title}</h1>
+          <p style="font-size:12px; color:#64748b; margin:0 0 24px 0;">${inputs.date_line}</p>
+          
+          <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:16px; border-radius:8px; margin-bottom:24px; font-size:13px; white-space:pre-line;">
+            <strong>${inputs.client_box}</strong>
+          </div>
+
+          <h3 style="color:#0a2540; margin:0 0 10px 0; font-size:16px;">${inputs.pricing_title}</h3>
+          <div style="background:#ffffff; border:1px solid #e2e8f0; padding:16px; border-radius:8px; margin-bottom:24px; font-size:13px; white-space:pre-line;">
+            ${inputs.pricing_details}
+          </div>
+
+          <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:14px; border-radius:6px; margin-bottom:24px; font-size:12px; white-space:pre-line;">
+            ${inputs.terms_box}
+          </div>
+
+          <div style="background:#f1f5f9; border:2px solid #0a2540; padding:14px; border-radius:6px; font-size:12px; white-space:pre-line;">
+            ${inputs.bank_box}
+          </div>
+        </div>
+      `;
+    }
+
+    function updatePdfmeLiveInputs() {
+      renderVectorHtmlCanvas();
+    }
+
+    function switchPdfmeMode(mode) {
+      currentPdfmeMode = mode;
+      const btnForm = document.getElementById('btn-mode-form');
+      const btnDesigner = document.getElementById('btn-mode-designer');
+
+      if (mode === 'form') {
+        btnForm.className = 'btn-action btn-emerald';
+        btnDesigner.className = 'btn-action btn-ghost';
+      } else {
+        btnForm.className = 'btn-action btn-ghost';
+        btnDesigner.className = 'btn-action btn-emerald';
+      }
+    }
+
+    function downloadPdfmeDocument() {
+      window.print();
+    }
+
+    async function savePdfmeTemplate() {
+      const title = document.getElementById('template-title').value;
+      const htmlContent = document.getElementById('pdfme-container').innerHTML;
+
+      const tempid = "<%= template.template_id %>";
+      const domainId = "<%= domain_id %>";
+
+      Swal.fire({
+        title: 'Saving pdfme Template...',
+        text: 'Saving template...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        const response = await fetch('/api/easy-builder/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            templateId: tempid,
+            domainId: domainId,
+            title: title,
+            html: htmlContent
+          })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          Swal.fire('Saved!', 'pdfme proposal saved successfully.', 'success');
+        } else {
+          Swal.fire('Error', result.error || 'Failed to save proposal', 'error');
+        }
+      } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+
+    window.addEventListener('load', () => {
+      initPdfmeEngine();
+    });
+  </script>
+</body>
+</html>
