@@ -48,6 +48,20 @@ app.use(express.static("public")); // For serving static files (CSS, JS, etc.)
 // Set EJS as the templating engine
 app.set("view engine", "ejs");
 
+// Helper function to render a fancy EJS error page
+function renderErrorPage(res, statusCode, title, message, details = null, req = null) {
+    const errorData = {
+        statusCode: statusCode || 500,
+        title: title || 'An Unexpected Error Occurred',
+        message: message || 'Something went wrong while processing your request.',
+        details: typeof details === 'object' ? JSON.stringify(details) : (details || null),
+        path: req ? req.originalUrl : '',
+        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) + ' (' + new Date().toISOString().split('T')[0] + ')'
+    };
+
+    return res.status(statusCode || 500).render('error', errorData);
+}
+
 // MySQL Database connection
 const db = mysql.createConnection({
     host: process.env.DB_HOST,
@@ -657,11 +671,11 @@ app.get("/template/:tid", async (req, res) => {
     const { domain_id, token } = req.query;
 
     if (!token) {
-        return res.status(401).send("Unauthorized: Token is required");
+        return renderErrorPage(res, 401, "Authentication Required", "A valid security token is required to access the template editor. Please re-open the builder from your CRM dashboard.", "Missing query parameter: token", req);
     }
 
     if (!domain_id) {
-        return res.status(400).send("domain_id is required");
+        return renderErrorPage(res, 400, "Domain ID Required", "The domain_id parameter was not specified in your request URL.", "Missing query parameter: domain_id", req);
     }
 
     try {
@@ -718,9 +732,9 @@ app.get("/template/:tid", async (req, res) => {
 
         const query = "SELECT * FROM template WHERE template_id = ?";
         db.query(query, [tid], async (err, results) => {
-            if (err) return res.status(500).send(err);
+            if (err) return renderErrorPage(res, 500, "Database Query Error", "An error occurred while retrieving template details.", err.message, req);
 
-            if (results.length === 0) return res.status(404).send("Template not found");
+            if (results.length === 0) return renderErrorPage(res, 404, "Template Not Found", "The template you are attempting to edit could not be found or may have been deleted.", `Template ID: ${tid}`, req);
 
             const template = results[0];
             const blocksMap = await fetchGlobalBlocksMap(domain_id);
@@ -750,7 +764,7 @@ app.get("/template/:tid", async (req, res) => {
 
     } catch (error) {
         console.error("Token validation error:", error.message);
-        return res.status(403).send("Invalid or expired token");
+        return renderErrorPage(res, 403, "Invalid or Expired Token", "Your security token has expired or is invalid. Please return to your CRM application and launch the builder again.", error.message, req);
     }
 });
 
@@ -923,7 +937,7 @@ app.get('/edit-template', async (req, res) => {
     const { tmpid, domain_id, token } = req.query;
 
     if (!token || !domain_id || !tmpid) {
-        return res.status(400).send("Bad Request: tmpid, domain_id and token are required");
+        return renderErrorPage(res, 400, "Bad Request", "Template ID, Domain ID, and Token are all required to edit this template.", null, req);
     }
 
     try {
@@ -933,11 +947,11 @@ app.get('/edit-template', async (req, res) => {
         db.query(query, [tmpid], (err, results) => {
             if (err) {
                 console.error("Error fetching template:", err);
-                return res.status(500).send("Internal Server Error");
+                return renderErrorPage(res, 500, "Database Error", "Internal error occurred while fetching template.", err.message, req);
             }
 
             if (results.length === 0) {
-                return res.status(404).send("Template not found");
+                return renderErrorPage(res, 404, "Template Not Found", "The requested template does not exist.", `Template ID: ${tmpid}`, req);
             }
 
             const template = results[0];
@@ -955,7 +969,7 @@ app.get('/edit-template', async (req, res) => {
         });
     } catch (error) {
         console.error("Token validation error:", error.message);
-        return res.status(403).send("Invalid or expired token");
+        return renderErrorPage(res, 403, "Invalid or Expired Token", "Your security token has expired or is invalid. Please launch the editor again from your CRM dashboard.", error.message, req);
     }
 });
 
@@ -995,14 +1009,14 @@ app.get('/global-branding', async (req, res) => {
     const { domain_id, token } = req.query;
 
     if (!token || !domain_id) {
-        return res.status(400).send("domain_id and token are required");
+        return renderErrorPage(res, 400, "Bad Request", "Domain ID and Token are required to edit global branding.", null, req);
     }
 
     try {
         jwt.verify(token, process.env.JWT_SECRET);
         const [rows] = await dbPromise.query("SELECT * FROM domain_config WHERE id = ?", [domain_id]);
         if (rows.length === 0) {
-            return res.status(404).send("Domain config not found");
+            return renderErrorPage(res, 404, "Domain Config Not Found", "The configuration for this domain could not be found.", `Domain ID: ${domain_id}`, req);
         }
 
         res.render('global_branding_editor', {
@@ -1012,7 +1026,7 @@ app.get('/global-branding', async (req, res) => {
         });
     } catch (error) {
         console.error("Token validation error:", error.message);
-        return res.status(403).send("Invalid or expired token");
+        return renderErrorPage(res, 403, "Invalid or Expired Token", "Your security token has expired or is invalid. Please return to your CRM dashboard to reopen global branding.", error.message, req);
     }
 });
 
@@ -1244,9 +1258,9 @@ app.get("/clone-template", (req, res) => {
 
   const query = "SELECT * FROM template WHERE template_id = ?";
   db.query(query, [tmpid], (err, results) => {
-    if (err) return res.status(500).send(err);
+    if (err) return renderErrorPage(res, 500, "Database Error", "Failed to query template for cloning.", err.message, req);
 
-    if (results.length === 0) return res.status(404).send("Template not found");
+    if (results.length === 0) return renderErrorPage(res, 404, "Template Not Found", "The template you are attempting to clone does not exist.", `Template ID: ${tmpid}`, req);
 
     const template = results[0];
     const cloneQuery = `
@@ -1254,7 +1268,7 @@ app.get("/clone-template", (req, res) => {
       VALUES (?, ?, ?, ?, ?)
     `;
     db.query(cloneQuery, [template.template_title, template.template, template.css, template.jscript, 1], (err, result) => {
-      if (err) return res.status(500).send(err);
+      if (err) return renderErrorPage(res, 500, "Database Error", "Failed to insert cloned template.", err.message, req);
 
       res.redirect("/");  // Redirect back to the template list
     });
@@ -1277,6 +1291,16 @@ app.get('/domains', (req, res) => {
     });
 });
 
+// Fallback 404 handler for undefined routes
+app.use((req, res) => {
+    renderErrorPage(res, 404, "Page Not Found", "The requested page or route does not exist on this server.", `Route: ${req.originalUrl}`, req);
+});
+
+// Global 500 error handler middleware
+app.use((err, req, res, next) => {
+    console.error("Unhandled Server Error:", err);
+    renderErrorPage(res, 500, "Internal Server Error", "An unexpected error occurred while processing your request.", err.message, req);
+});
 
 // Start the server
 app.listen(PORT, () => {
