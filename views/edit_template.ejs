@@ -2231,6 +2231,17 @@
       const iframe = document.getElementById('preview-iframe');
       if (!iframe || !htmlAce) return;
 
+      let scrollTop = 0;
+      let scrollLeft = 0;
+      try {
+        const win = iframe.contentWindow;
+        const doc = iframe.contentDocument || (win && win.document);
+        if (win) {
+          scrollTop = win.pageYOffset || (doc && doc.documentElement ? doc.documentElement.scrollTop : 0) || (doc && doc.body ? doc.body.scrollTop : 0);
+          scrollLeft = win.pageXOffset || (doc && doc.documentElement ? doc.documentElement.scrollLeft : 0) || (doc && doc.body ? doc.body.scrollLeft : 0);
+        }
+      } catch(e) {}
+
       const htmlContent = htmlAce.getValue().trim();
       const cssContent = cssAce ? cssAce.getValue() : "";
       const jsContent = jsAce ? jsAce.getValue() : "";
@@ -2355,8 +2366,14 @@
       iframe.onload = function() {
         attachIframeInspectorEvents(iframe);
         const doc = iframe.contentDocument || iframe.contentWindow.document;
+        const win = iframe.contentWindow;
         if (doc) renderA4PageGuides(doc);
         if (isLayersPanelOpen) buildLayersTree();
+        if (win && (scrollTop > 0 || scrollLeft > 0)) {
+          try {
+            win.scrollTo(scrollLeft, scrollTop);
+          } catch(e) {}
+        }
       };
     }
 
@@ -3257,10 +3274,15 @@
       deleteSelected() {
         if (!this.target) return;
         saveHistoryState();
-        this.cleanupCSSForDeletedElement(this.target);
-        this.target.remove();
-        closeVisualInspector();
-        this.syncIframeToCode();
+        isSyncingFromVI = true;
+        try {
+          this.cleanupCSSForDeletedElement(this.target);
+          this.target.remove();
+          closeVisualInspector();
+          this.syncIframeToCode();
+        } finally {
+          isSyncingFromVI = false;
+        }
         if (isLayersPanelOpen) buildLayersTree();
         if (window.Swal) {
           Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Element & associated CSS removed', showConfirmButton: false, timer: 1500 });
