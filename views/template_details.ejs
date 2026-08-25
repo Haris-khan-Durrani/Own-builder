@@ -2328,20 +2328,6 @@ editor.setComponents(templateHTML);
         }, 5000);
 }
 
-    // ── Zoom control functions ──
-    let currentZoom = 75;
-    function changeZoom(delta) {
-      currentZoom = Math.min(150, Math.max(30, currentZoom + delta));
-      editor.Canvas.setZoom(currentZoom);
-      const el = document.getElementById('zoom-value');
-      if (el) el.textContent = currentZoom + '%';
-    }
-    function resetZoom() {
-      currentZoom = 75;
-      editor.Canvas.setZoom(75);
-      const el = document.getElementById('zoom-value');
-      if (el) el.textContent = '75%';
-    }
 
     // ── USER-FRIENDLY BUILDER HELPERS ──
     function openVariablePickerModal() {
