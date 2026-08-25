@@ -1860,7 +1860,7 @@
       } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
         e.preventDefault();
         redoAction();
-      } else if ((e.key === 'Delete' || e.key === 'Backspace') && !isInputFocused && VI.target) {
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && !isInputFocused && (VI.target || (VI.targets && VI.targets.length > 0))) {
         e.preventDefault();
         VI.deleteSelected();
       }
@@ -2002,16 +2002,17 @@
 
         const friendlyTitle = getFriendlyLayerName(el);
         const hasChildren = el.children.length > 0;
+        const isSelected = VI.target === el || (VI.targets && VI.targets.includes(el));
 
         const item = document.createElement('div');
         item.className = 'layer-item';
-        if (VI.target === el) item.classList.add('active');
+        if (isSelected) item.classList.add('active');
         item.style.paddingLeft = (indent * 12 + 6) + 'px';
 
         item.innerHTML = `
           <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; width: 100%;">
             ${hasChildren ? '<i class="fa-solid fa-caret-down toggle-caret" style="font-size: 10px; color: #64748b; width: 10px; cursor: pointer;"></i>' : '<span style="width: 10px;"></span>'}
-            <span style="color: ${VI.target === el ? '#fff' : '#38bdf8'}; font-weight: 600; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${friendlyTitle}</span>
+            <span style="color: ${isSelected ? '#fff' : '#38bdf8'}; font-weight: 600; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${friendlyTitle}</span>
           </div>
         `;
 
@@ -2025,9 +2026,8 @@
         };
         item.onclick = (e) => {
           e.stopPropagation();
-          doc.querySelectorAll('[data-vi-selected]').forEach(sEl => sEl.removeAttribute('data-vi-selected'));
-          el.setAttribute('data-vi-selected', 'true');
-          VI.selectElement(el);
+          const isMulti = e.ctrlKey || e.metaKey || e.shiftKey;
+          VI.selectElement(el, isMulti);
           buildLayersTree();
         };
 
@@ -2402,10 +2402,8 @@
           e.preventDefault();
           e.stopPropagation();
 
-          doc.querySelectorAll('[data-vi-selected]').forEach(el => el.removeAttribute('data-vi-selected'));
-          e.target.setAttribute('data-vi-selected', 'true');
-
-          VI.selectElement(e.target);
+          const isMulti = e.ctrlKey || e.metaKey || e.shiftKey;
+          VI.selectElement(e.target, isMulti);
           if (isLayersPanelOpen) buildLayersTree();
         });
 
@@ -2479,14 +2477,52 @@
     // ══════════════════════════════════════════════════════════════
     const VI = {
       target: null,
+      targets: [],
 
-      selectElement(el) {
-        this.target = el;
-        const tag = el.tagName.toLowerCase();
-        const cls = el.className ? '.' + el.className.toString().replace(/\s+/g, '.').replace(/\bdata-vi-[a-z]+\b/g, '').replace(/\.\./g, '.') : '';
+      getSelectedList() {
+        if (this.targets && this.targets.length > 0) {
+          return this.targets.filter(el => el && el.ownerDocument && el.ownerDocument.body.contains(el));
+        }
+        if (this.target && this.target.ownerDocument && this.target.ownerDocument.body.contains(this.target)) {
+          return [this.target];
+        }
+        return [];
+      },
 
-        // Auto Scroll Preview Iframe to the selected element smoothly
-        if (el && el.scrollIntoView) {
+      selectElement(el, isMulti = false) {
+        if (!el) return;
+        if (!this.targets) this.targets = [];
+
+        const doc = el.ownerDocument;
+
+        if (isMulti) {
+          const idx = this.targets.indexOf(el);
+          if (idx > -1) {
+            this.targets.splice(idx, 1);
+            el.removeAttribute('data-vi-selected');
+            if (this.targets.length > 0) {
+              this.target = this.targets[this.targets.length - 1];
+            } else {
+              this.target = null;
+              closeVisualInspector();
+              return;
+            }
+          } else {
+            this.targets.push(el);
+            el.setAttribute('data-vi-selected', 'true');
+            this.target = el;
+          }
+        } else {
+          if (doc) {
+            doc.querySelectorAll('[data-vi-selected]').forEach(sEl => sEl.removeAttribute('data-vi-selected'));
+          }
+          this.targets = [el];
+          this.target = el;
+          el.setAttribute('data-vi-selected', 'true');
+        }
+
+        // Auto Scroll Preview Iframe to the selected element smoothly if single-select
+        if (el && el.scrollIntoView && !isMulti) {
           try {
             el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
           } catch(e) {
@@ -2494,10 +2530,15 @@
           }
         }
 
-        // Make element draggable in iframe
-        el.setAttribute('draggable', 'true');
+        // Make elements draggable in iframe
+        this.targets.forEach(tEl => tEl.setAttribute('draggable', 'true'));
 
-        document.getElementById('vi-tag-badge').textContent = tag;
+        const tag = el.tagName.toLowerCase();
+        const cls = el.className ? '.' + el.className.toString().replace(/\s+/g, '.').replace(/\bdata-vi-[a-z]+\b/g, '').replace(/\.\./g, '.') : '';
+        const multiCount = this.targets.length;
+        const tagText = multiCount > 1 ? `${tag} (${multiCount} selected)` : tag;
+
+        document.getElementById('vi-tag-badge').textContent = tagText;
         document.getElementById('vi-class-badge').textContent = cls || '';
 
         const textVal = el.children.length === 0 ? el.innerText : '';
@@ -2661,14 +2702,17 @@
         bar.className = 'vi-floating-bar';
 
         const tag = el.tagName.toLowerCase();
+        const count = (this.targets && this.targets.length > 1) ? this.targets.length : 1;
+        const tagBadgeText = count > 1 ? `${tag} (${count} selected)` : tag;
+
         bar.innerHTML = `
-          <span class="vi-fb-tag">${tag}</span>
+          <span class="vi-fb-tag">${tagBadgeText}</span>
           <button class="btn-vi-up" title="Move Up"><i class="fa-solid fa-arrow-up"></i></button>
           <button class="btn-vi-down" title="Move Down"><i class="fa-solid fa-arrow-down"></i></button>
           <button class="btn-vi-parent" title="Select Parent Container"><i class="fa-solid fa-turn-up"></i> Parent</button>
-          <button class="btn-vi-add" style="background: #2563eb; color: #ffffff; border-color: #2563eb;" title="Insert Custom Element or HTML Snippet Before / After / Inside"><i class="fa-solid fa-plus"></i> Add</button>
+          <button class="btn-vi-add" style="background: #2563eb; color: #ffffff; border-color: #2563eb;" title="Insert Custom Element or HTML Snippet"><i class="fa-solid fa-plus"></i> Add</button>
           <button class="btn-vi-clone" title="Clone / Duplicate"><i class="fa-solid fa-copy"></i></button>
-          <button class="btn-vi-del danger" title="Delete Element"><i class="fa-solid fa-trash"></i></button>
+          <button class="btn-vi-del danger" title="Delete Selected (${count})"><i class="fa-solid fa-trash"></i></button>
         `;
 
         bar.querySelector('.btn-vi-up').onclick = (e) => { e.preventDefault(); e.stopPropagation(); VI.moveSelectedUp(); };
@@ -2906,67 +2950,80 @@
       },
 
       moveSelectedUp() {
-        if (!this.target) return;
+        const list = this.getSelectedList();
+        if (list.length === 0) return;
         saveHistoryState();
-        let elToMove = this.target;
-        if (!elToMove.previousElementSibling && elToMove.parentNode && elToMove.parentNode !== elToMove.ownerDocument.body) {
-          elToMove = elToMove.parentNode;
-        }
-        const prev = elToMove.previousElementSibling;
-        if (prev) {
-          elToMove.parentNode.insertBefore(elToMove, prev);
-          this.syncIframeToCode();
-          this.selectElement(this.target);
-          if (isLayersPanelOpen) buildLayersTree();
-        }
+        list.forEach(el => {
+          let elToMove = el;
+          if (!elToMove.previousElementSibling && elToMove.parentNode && elToMove.parentNode !== elToMove.ownerDocument.body) {
+            elToMove = elToMove.parentNode;
+          }
+          const prev = elToMove.previousElementSibling;
+          if (prev) {
+            elToMove.parentNode.insertBefore(elToMove, prev);
+          }
+        });
+        this.syncIframeToCode();
+        if (this.target) this.selectElement(this.target, true);
+        if (isLayersPanelOpen) buildLayersTree();
       },
 
       moveSelectedDown() {
-        if (!this.target) return;
+        const list = this.getSelectedList();
+        if (list.length === 0) return;
         saveHistoryState();
-        let elToMove = this.target;
-        if (!elToMove.nextElementSibling && elToMove.parentNode && elToMove.parentNode !== elToMove.ownerDocument.body) {
-          elToMove = elToMove.parentNode;
-        }
-        const next = elToMove.nextElementSibling;
-        if (next) {
-          elToMove.parentNode.insertBefore(next, elToMove);
-          this.syncIframeToCode();
-          this.selectElement(this.target);
-          if (isLayersPanelOpen) buildLayersTree();
-        }
+        list.forEach(el => {
+          let elToMove = el;
+          if (!elToMove.nextElementSibling && elToMove.parentNode && elToMove.parentNode !== elToMove.ownerDocument.body) {
+            elToMove = elToMove.parentNode;
+          }
+          const next = elToMove.nextElementSibling;
+          if (next) {
+            elToMove.parentNode.insertBefore(next, elToMove);
+          }
+        });
+        this.syncIframeToCode();
+        if (this.target) this.selectElement(this.target, true);
+        if (isLayersPanelOpen) buildLayersTree();
       },
 
       applyStyle(prop, val) {
-        if (!this.target) return;
+        const list = this.getSelectedList();
+        if (list.length === 0) return;
         saveHistoryState();
-        if (val === null || val === undefined || val === '') {
-          this.target.style.removeProperty(prop);
-        } else {
-          this.target.style.setProperty(prop, val, 'important');
-        }
+        list.forEach(el => {
+          if (val === null || val === undefined || val === '') {
+            el.style.removeProperty(prop);
+          } else {
+            el.style.setProperty(prop, val, 'important');
+          }
+        });
         this.syncIframeToCode();
-        this.updateAssociatedCodeBox(this.target);
+        this.updateAssociatedCodeBox(this.target || list[0]);
       },
 
       applyText(val) {
-        if (!this.target) return;
+        const list = this.getSelectedList();
+        if (list.length === 0) return;
         saveHistoryState();
-        this.target.innerText = val;
+        list.forEach(el => { el.innerText = val; });
         this.syncIframeToCode();
-        this.updateAssociatedCodeBox(this.target);
+        this.updateAssociatedCodeBox(this.target || list[0]);
       },
 
       applyAttr(attr, val) {
-        if (!this.target) return;
+        const list = this.getSelectedList();
+        if (list.length === 0) return;
         saveHistoryState();
-        if (val === '') {
-          this.target.removeAttribute(attr);
-        } else {
-          this.target.setAttribute(attr, val);
-        }
+        list.forEach(el => {
+          if (val === '') {
+            el.removeAttribute(attr);
+          } else {
+            el.setAttribute(attr, val);
+          }
+        });
         this.syncIframeToCode();
-        this.updateAssociatedCodeBox(this.target);
+        this.updateAssociatedCodeBox(this.target || list[0]);
       },
 
       updateAssociatedCodeBox(el) {
@@ -3272,12 +3329,19 @@
       },
 
       deleteSelected() {
-        if (!this.target) return;
+        const list = [...this.getSelectedList()];
+        if (list.length === 0) return;
         saveHistoryState();
         isSyncingFromVI = true;
         try {
-          this.cleanupCSSForDeletedElement(this.target);
-          this.target.remove();
+          list.forEach(el => {
+            if (el && el.parentNode) {
+              this.cleanupCSSForDeletedElement(el);
+              el.remove();
+            }
+          });
+          this.targets = [];
+          this.target = null;
           closeVisualInspector();
           this.syncIframeToCode();
         } finally {
@@ -3285,7 +3349,8 @@
         }
         if (isLayersPanelOpen) buildLayersTree();
         if (window.Swal) {
-          Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Element & associated CSS removed', showConfirmButton: false, timer: 1500 });
+          const titleText = list.length > 1 ? `${list.length} elements & associated CSS removed` : 'Element & associated CSS removed';
+          Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: titleText, showConfirmButton: false, timer: 1500 });
         }
       },
 
@@ -3338,20 +3403,35 @@
       },
 
       duplicateSelected() {
-        if (!this.target) return;
+        const list = [...this.getSelectedList()];
+        if (list.length === 0) return;
         saveHistoryState();
-        const clone = this.target.cloneNode(true);
-        clone.removeAttribute('data-vi-selected');
-        clone.removeAttribute('data-vi-hover');
-        clone.removeAttribute('draggable');
-        this.target.parentNode.insertBefore(clone, this.target.nextSibling);
+        const newClones = [];
+        list.forEach(el => {
+          if (el && el.parentNode) {
+            const clone = el.cloneNode(true);
+            clone.removeAttribute('data-vi-selected');
+            clone.removeAttribute('data-vi-hover');
+            clone.removeAttribute('draggable');
+            el.parentNode.insertBefore(clone, el.nextSibling);
+            newClones.push(clone);
+          }
+        });
         this.syncIframeToCode();
-        this.selectElement(clone);
+        if (newClones.length > 0) {
+          const doc = newClones[0].ownerDocument;
+          if (doc) doc.querySelectorAll('[data-vi-selected]').forEach(sEl => sEl.removeAttribute('data-vi-selected'));
+          this.targets = newClones;
+          this.target = newClones[newClones.length - 1];
+          newClones.forEach(c => c.setAttribute('data-vi-selected', 'true'));
+          this.selectElement(this.target, true);
+        }
         if (isLayersPanelOpen) buildLayersTree();
       },
 
       applyBackgroundImage(url) {
-        if (!this.target) return;
+        const list = this.getSelectedList();
+        if (list.length === 0) return;
         saveHistoryState();
         const cleanUrl = url.trim();
         if (cleanUrl) {
@@ -3401,11 +3481,12 @@
       },
 
       clearStyles() {
-        if (!this.target) return;
+        const list = this.getSelectedList();
+        if (list.length === 0) return;
         saveHistoryState();
-        this.target.removeAttribute('style');
-        this.selectElement(this.target);
+        list.forEach(el => el.removeAttribute('style'));
         this.syncIframeToCode();
+        if (this.target) this.selectElement(this.target, true);
       },
 
       fetchGlobalBranding() {
