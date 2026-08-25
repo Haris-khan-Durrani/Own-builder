@@ -130,54 +130,71 @@
       #shortcut-hint kbd { background: var(--surface-3); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 10px; color: var(--text); font-family: monospace; }
 
       /* ── A4 CANVAS LAYOUT ── */
-      /* Dark workspace background with padding around the page */
+      /* Dark workspace background with padding around the page and centered page alignment */
       .gjs-cv-canvas {
-        background: #1c2333 !important;
-        padding: 24px !important;
+        background: #0f172a !important;
+        padding: 40px 20px !important;
         box-sizing: border-box !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: flex-start !important;
+        overflow: auto !important;
       }
 
-      /* Frame wrapper — just a subtle shadow, NO width clipping */
+      /* Frame wrapper — strict A4 portrait dimensions & paper elevation shadow */
       .gjs-frame-wrapper {
-        border-radius: 2px !important;
-        box-shadow: 0 4px 8px rgba(0,0,0,.25), 0 16px 48px rgba(0,0,0,.6) !important;
-        background: #fff !important;
+        width: 794px !important;             /* Exact A4 width at 96 DPI (210mm) */
+        min-height: 1123px !important;       /* Exact A4 height at 96 DPI (297mm) */
+        margin: 0 auto !important;
+        border-radius: 4px !important;
+        box-shadow: 0 14px 45px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+        background: #ffffff !important;
         outline: none !important;
         overflow: visible !important;
+        transition: width 0.25s ease, min-height 0.25s ease;
       }
 
-      /* Frame itself */
-      .gjs-frame { border: none !important; display: block !important; }
+      /* Frame itself inside wrapper */
+      .gjs-frame {
+        width: 794px !important;
+        border: none !important;
+        display: block !important;
+        margin: 0 auto !important;
+        background: #ffffff !important;
+      }
 
-      /* ZOOM CONTROL BAR */
+      /* ZOOM & PAGE MODE CONTROL BAR */
       #canvas-zoom-bar {
         position: fixed;
-        bottom: 48px;
-        right: 16px;
+        bottom: 32px;
+        right: 24px;
         z-index: 8500;
         display: flex;
         align-items: center;
         gap: 6px;
-        background: var(--surface);
-        border: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.92);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.14);
         border-radius: 99px;
-        padding: 5px 12px;
-        box-shadow: var(--shadow);
+        padding: 6px 14px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.6);
         font-size: 12px;
-        color: var(--text-muted);
+        color: #94a3b8;
       }
       #canvas-zoom-bar button {
-        background: var(--surface-3);
-        border: 1px solid var(--border);
-        color: var(--text);
+        background: #1e293b;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #f8fafc;
         border-radius: 6px;
-        width: 26px; height: 26px;
+        height: 28px;
+        padding: 0 9px;
         display: flex; align-items: center; justify-content: center;
-        cursor: pointer; font-size: 16px; line-height: 1;
-        transition: background .15s;
+        cursor: pointer; font-size: 12px; font-weight: 500;
+        transition: all .15s ease;
       }
-      #canvas-zoom-bar button:hover { background: var(--brand); color: #fff; }
-      #zoom-value { min-width: 36px; text-align: center; font-weight: 600; color: var(--text); }
+      #canvas-zoom-bar button:hover { background: #2563eb; color: #fff; border-color: #3b82f6; }
+      #canvas-zoom-bar button.active-orient { background: #2563eb; color: #fff; border-color: #3b82f6; font-weight: 600; }
+      #zoom-value { min-width: 42px; text-align: center; font-weight: 600; color: #f8fafc; font-size: 12px; }
 
       /* ── TABLE THEME DROPDOWN ── */
       #tableThemeDropdown {
@@ -811,10 +828,17 @@
 
     <!-- ZOOM CONTROL BAR -->
     <div id="canvas-zoom-bar">
-      <button onclick="changeZoom(-10)" title="Zoom out">−</button>
-      <span id="zoom-value">75%</span>
-      <button onclick="changeZoom(10)" title="Zoom in">+</button>
-      <button onclick="resetZoom()" title="Reset zoom" style="width:auto;padding:0 8px;font-size:11px;">Fit</button>
+      <div style="display:flex; align-items:center; gap:4px; margin-right:6px; border-right:1px solid rgba(255,255,255,0.12); padding-right:8px;">
+        <button onclick="setOrientation('portrait')" id="btn-orient-portrait" class="active-orient" title="A4 Portrait (794px × 1123px)">📄 Portrait</button>
+        <button onclick="setOrientation('landscape')" id="btn-orient-landscape" title="A4 Landscape (1123px × 794px)">🖼️ Landscape</button>
+        <button onclick="setCanvasMode('a4')" id="btn-mode-a4" class="active-orient" title="Standard A4 Sheet (794px)">A4 Sheet</button>
+        <button onclick="setCanvasMode('full')" id="btn-mode-full" title="Fluid Full Width Canvas">Full Width</button>
+      </div>
+      <button onclick="changeZoom(-10)" title="Zoom out" style="width:28px; font-size:16px;">−</button>
+      <span id="zoom-value">100%</span>
+      <button onclick="changeZoom(10)" title="Zoom in" style="width:28px; font-size:16px;">+</button>
+      <button onclick="resetZoom()" title="Reset zoom (100%)">100%</button>
+      <button onclick="fitZoom()" title="Fit to Screen">Fit</button>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
@@ -1055,11 +1079,101 @@ console.log("loaded");
         applyTableThemeToCanvas(theme);
     }
 
+    // ── Canvas Zoom & A4 Page Size Engine ──
+    let currentZoom = 100;
+    let currentOrientation = 'portrait';
+    let currentMode = 'a4';
+
+    function updateZoomDisplay() {
+      const zv = document.getElementById('zoom-value');
+      if (zv) zv.textContent = Math.round(currentZoom) + '%';
+      if (typeof editor !== 'undefined' && editor.Canvas) {
+        editor.Canvas.setZoom(currentZoom);
+      }
+    }
+
+    function changeZoom(delta) {
+      currentZoom = Math.min(200, Math.max(30, currentZoom + delta));
+      updateZoomDisplay();
+    }
+
+    function resetZoom() {
+      currentZoom = 100;
+      updateZoomDisplay();
+    }
+
+    function fitZoom() {
+      const canvasWrap = document.getElementById('editor-canvas-wrap');
+      if (!canvasWrap) return;
+      const availWidth = canvasWrap.clientWidth - 80;
+      const targetWidth = currentMode === 'full' ? 1200 : (currentOrientation === 'portrait' ? 794 : 1123);
+      let calcZoom = Math.floor((availWidth / targetWidth) * 100);
+      currentZoom = Math.min(100, Math.max(40, calcZoom));
+      updateZoomDisplay();
+    }
+
+    function setCanvasMode(mode) {
+      currentMode = mode;
+      const pBtn = document.getElementById('btn-mode-a4');
+      const fBtn = document.getElementById('btn-mode-full');
+      if (pBtn && fBtn) {
+        if (mode === 'a4') {
+          pBtn.classList.add('active-orient');
+          fBtn.classList.remove('active-orient');
+          applyCanvasDimensions(currentOrientation === 'portrait' ? '794px' : '1123px', currentOrientation === 'portrait' ? '1123px' : '794px');
+        } else {
+          fBtn.classList.add('active-orient');
+          pBtn.classList.remove('active-orient');
+          applyCanvasDimensions('100%', '100%');
+        }
+      }
+    }
+
+    function setOrientation(mode) {
+      currentOrientation = mode;
+      const pBtn = document.getElementById('btn-orient-portrait');
+      const lBtn = document.getElementById('btn-orient-landscape');
+      if (pBtn && lBtn) {
+        if (mode === 'portrait') {
+          pBtn.classList.add('active-orient');
+          lBtn.classList.remove('active-orient');
+        } else {
+          lBtn.classList.add('active-orient');
+          pBtn.classList.remove('active-orient');
+        }
+      }
+      if (currentMode === 'a4') {
+        const width = mode === 'portrait' ? '794px' : '1123px';
+        const height = mode === 'portrait' ? '1123px' : '794px';
+        applyCanvasDimensions(width, height);
+      }
+    }
+
+    function applyCanvasDimensions(width, minHeight) {
+      const wrapper = document.querySelector('.gjs-frame-wrapper');
+      const frame = document.querySelector('.gjs-frame');
+      if (wrapper) {
+        wrapper.style.setProperty('width', width, 'important');
+        wrapper.style.setProperty('min-height', minHeight, 'important');
+      }
+      if (frame) {
+        frame.style.setProperty('width', width === '100%' ? '100%' : width, 'important');
+      }
+      if (typeof editor !== 'undefined' && editor.Canvas) {
+        const canvasDoc = editor.Canvas.getDocument();
+        if (canvasDoc && canvasDoc.body) {
+          canvasDoc.body.style.setProperty('width', width, 'important');
+          canvasDoc.body.style.setProperty('max-width', width, 'important');
+          canvasDoc.body.style.setProperty('min-height', minHeight, 'important');
+        }
+      }
+    }
+
     // ── A4 Canvas: inject page layout CSS into the canvas iframe ──
     editor.on('load', () => {
-
-      // Set initial zoom to 75% so A4 page fits comfortably
-      editor.Canvas.setZoom(75);
+      // Set initial zoom and ensure standard A4 portrait sizing on load
+      applyCanvasDimensions('794px', '1123px');
+      resetZoom();
 
       // Inject A4 page-break and body styling into the canvas iframe
       const canvasDoc = editor.Canvas.getDocument();
@@ -1067,34 +1181,39 @@ console.log("loaded");
         const a4Style = canvasDoc.createElement('style');
         a4Style.id = 'gjs-a4-canvas-style';
         a4Style.innerHTML = `
-          /* Canvas body — white A4 page */
-          body {
-            background: #ffffff !important;
-            min-height: 1122px !important;   /* A4 height at 96dpi */
+          /* Canvas body — exact A4 sheet centered */
+          html, body {
+            width: 794px !important;
+            max-width: 794px !important;
+            min-height: 1123px !important;   /* A4 height at 96dpi (297mm) */
             padding: 0 !important;
-            margin: 0 !important;
+            margin: 0 auto !important;
+            background: #ffffff !important;
+            box-sizing: border-box !important;
+            overflow-x: hidden !important;
           }
 
           /* Page break elements — show as visible separator */
           pagebreak {
             display: block !important;
             width: 100% !important;
-            height: 48px !important;
-            background: #1c2333 !important;
+            height: 44px !important;
+            background: #0f172a !important;
             position: relative !important;
-            margin: 0 !important;
+            margin: 24px 0 !important;
             box-sizing: border-box !important;
-            border-top: 2px dashed rgba(37,99,235,.5) !important;
-            border-bottom: 2px dashed rgba(37,99,235,.5) !important;
+            border-top: 2px dashed rgba(56,189,248,.5) !important;
+            border-bottom: 2px dashed rgba(56,189,248,.5) !important;
           }
           pagebreak::after {
-            content: '— Page Break —';
+            content: '— A4 Page Break —';
             display: block;
             text-align: center;
-            line-height: 44px;
-            color: rgba(100,150,255,.7);
+            line-height: 40px;
+            color: rgba(56,189,248,.9);
             font-size: 11px;
             font-family: Inter, system-ui, sans-serif;
+            font-weight: 600;
             letter-spacing: .08em;
             pointer-events: none;
           }
@@ -1120,8 +1239,7 @@ console.log("loaded");
           canvasDoc.head.appendChild(a4Style);
         }
       }
-
-
+    });
 
 editor.on('component:selected', (model) => {
   console.log('Component selected:', model);
